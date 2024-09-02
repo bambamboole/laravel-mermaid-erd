@@ -2,9 +2,9 @@
 
 namespace Bambamboole\LaravelMermaidErd;
 
+use Bambamboole\LaravelMermaidErd\Commands\LaravelMermaidErdCommand;
 use Spatie\LaravelPackageTools\Package;
 use Spatie\LaravelPackageTools\PackageServiceProvider;
-use Bambamboole\LaravelMermaidErd\Commands\LaravelMermaidErdCommand;
 
 class LaravelMermaidErdServiceProvider extends PackageServiceProvider
 {
@@ -18,8 +18,16 @@ class LaravelMermaidErdServiceProvider extends PackageServiceProvider
         $package
             ->name('laravel-mermaid-erd')
             ->hasConfigFile()
-            ->hasViews()
-            ->hasMigration('create_laravel_mermaid_erd_table')
             ->hasCommand(LaravelMermaidErdCommand::class);
+    }
+
+    public function bootingPackage(): void
+    {
+        $this->app->bind(DatabaseInformationService::class, function () {
+            return new DatabaseInformationService(
+                $this->app->make('db')->connection(),
+                config('laravel-mermaid-erd.ignore_tables', [])
+            );
+        });
     }
 }

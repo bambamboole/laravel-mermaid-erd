@@ -2,9 +2,9 @@
 
 namespace Bambamboole\LaravelMermaidErd\Tests;
 
+use Bambamboole\LaravelMermaidErd\LaravelMermaidErdServiceProvider;
 use Illuminate\Database\Eloquent\Factories\Factory;
 use Orchestra\Testbench\TestCase as Orchestra;
-use Bambamboole\LaravelMermaidErd\LaravelMermaidErdServiceProvider;
 
 class TestCase extends Orchestra
 {
