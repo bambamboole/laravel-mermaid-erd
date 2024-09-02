@@ -1,12 +1,12 @@
 <?php
 
-namespace VendorName\Skeleton\Commands;
+namespace Bambamboole\LaravelMermaidErd\Commands;
 
 use Illuminate\Console\Command;
 
-class SkeletonCommand extends Command
+class LaravelMermaidErdCommand extends Command
 {
-    public $signature = 'skeleton';
+    public $signature = 'laravel-mermaid-erd';
 
     public $description = 'My command';
 
