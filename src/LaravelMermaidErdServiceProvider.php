@@ -26,7 +26,7 @@ class LaravelMermaidErdServiceProvider extends PackageServiceProvider
         $this->app->bind(DatabaseInformationService::class, function () {
             return new DatabaseInformationService(
                 $this->app->make('db')->connection(),
-                config('laravel-mermaid-erd.ignore_tables', [])
+                config('mermaid-erd.ignore_tables', [])
             );
         });
     }
