@@ -26,11 +26,33 @@ class TestCase extends Orchestra
 
     public function getEnvironmentSetUp($app)
     {
-        config()->set('database.default', 'testing');
+        $connection = env('DB_CONNECTION', 'testing');
+        config()->set('database.default', $connection);
 
-        /*
-        $migration = include __DIR__.'/../database/migrations/create_laravel-mermaid-erd_table.php.stub';
-        $migration->up();
-        */
+        if ($connection === 'mysql') {
+            config()->set('database.connections.mysql', [
+                'driver' => 'mysql',
+                'host' => env('DB_HOST', '127.0.0.1'),
+                'port' => env('DB_PORT', '3306'),
+                'database' => env('DB_DATABASE', 'testing'),
+                'username' => env('DB_USERNAME', 'root'),
+                'password' => env('DB_PASSWORD', ''),
+            ]);
+        } elseif ($connection === 'pgsql') {
+            config()->set('database.connections.pgsql', [
+                'driver' => 'pgsql',
+                'host' => env('DB_HOST', '127.0.0.1'),
+                'port' => env('DB_PORT', '5432'),
+                'database' => env('DB_DATABASE', 'testing'),
+                'username' => env('DB_USERNAME', 'postgres'),
+                'password' => env('DB_PASSWORD', ''),
+            ]);
+        } elseif ($connection === 'sqlite') {
+            config()->set('database.connections.sqlite', [
+                'driver' => 'sqlite',
+                'database' => env('DB_DATABASE', ':memory:'),
+                'prefix' => '',
+            ]);
+        }
     }
 }
