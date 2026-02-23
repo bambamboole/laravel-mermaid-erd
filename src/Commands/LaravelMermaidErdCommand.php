@@ -36,7 +36,10 @@ class LaravelMermaidErdCommand extends Command
             $onlyTables,
         );
 
-        $generator = new MermaidErdGenerator($service);
+        $generator = new MermaidErdGenerator(
+            $service,
+            config('mermaid-erd.polymorphic_relationships', []),
+        );
         $diagram = $generator->generate();
 
         $output = $this->option('output') ?? select(

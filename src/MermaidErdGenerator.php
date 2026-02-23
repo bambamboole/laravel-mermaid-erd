@@ -6,6 +6,7 @@ class MermaidErdGenerator
 {
     public function __construct(
         private readonly DatabaseInformationService $databaseInformationService,
+        private readonly array $polymorphicRelationships = [],
     ) {}
 
     public function generate(): string
@@ -28,6 +29,13 @@ class MermaidErdGenerator
             $diagram .= "    {$pivot['tables'][0]} }o--o{ {$pivot['tables'][1]} : \"{$pivot['name']}\"\n";
         }
 
+        foreach ($this->polymorphicRelationships as $key => $targetTables) {
+            [$table, $morphName] = explode('.', $key, 2);
+            foreach ($targetTables as $targetTable) {
+                $diagram .= "    {$targetTable} ||--o{ {$table} : \"morphMany via {$morphName}\"\n";
+            }
+        }
+
         return $diagram;
     }
 
@@ -40,6 +48,9 @@ class MermaidErdGenerator
         $uniqueColumns = $this->getUniqueColumns($table);
 
         $columns = $this->databaseInformationService->getColumns($table);
+        $columnNames = array_map(fn (array $col) => $col['name'], $columns);
+        $polymorphicColumns = $this->detectPolymorphicColumns($columnNames);
+
         foreach ($columns as $column) {
             $name = $column['name'];
             $line = "        {$column['type_name']} {$name}";
@@ -59,6 +70,12 @@ class MermaidErdGenerator
             }
 
             $comments = [];
+            if ($name === 'deleted_at') {
+                $comments[] = 'soft-delete';
+            }
+            if (in_array($name, $polymorphicColumns)) {
+                $comments[] = 'polymorphic';
+            }
             if ($column['nullable']) {
                 $comments[] = 'nullable';
             }
@@ -166,6 +183,30 @@ class MermaidErdGenerator
         }
 
         return array_unique(array_merge(...array_map(fn (array $fk) => $fk['columns'], $foreignKeys)));
+    }
+
+    /**
+     * @return string[]
+     */
+    private function detectPolymorphicColumns(array $columnNames): array
+    {
+        $polymorphic = [];
+
+        foreach ($columnNames as $name) {
+            if (!str_ends_with($name, '_type')) {
+                continue;
+            }
+
+            $morphName = substr($name, 0, -5);
+            $idColumn = $morphName.'_id';
+
+            if (in_array($idColumn, $columnNames)) {
+                $polymorphic[] = $name;
+                $polymorphic[] = $idColumn;
+            }
+        }
+
+        return $polymorphic;
     }
 
     private function getUniqueColumns(string $table): array

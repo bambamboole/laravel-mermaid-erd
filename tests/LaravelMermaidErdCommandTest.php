@@ -115,6 +115,36 @@ it('supports the --connection option', function () {
     expect(Artisan::output())->toContain('erDiagram');
 });
 
+it('detects soft-delete columns and annotates them', function () {
+    Artisan::call('generate:mermaid-erd', ['--output' => 'stdout']);
+    $output = Artisan::output();
+
+    expect($output)
+        ->toMatch('/videos \{[^}]*datetime deleted_at "soft-delete, nullable"/s');
+});
+
+it('detects polymorphic column pairs and annotates them', function () {
+    Artisan::call('generate:mermaid-erd', ['--output' => 'stdout']);
+    $output = Artisan::output();
+
+    expect($output)
+        ->toMatch('/reviews \{[^}]*varchar reviewable_type "polymorphic"/s')
+        ->toMatch('/reviews \{[^}]*integer reviewable_id "polymorphic"/s');
+});
+
+it('renders polymorphic relationships from config', function () {
+    config()->set('mermaid-erd.polymorphic_relationships', [
+        'reviews.reviewable' => ['posts', 'videos'],
+    ]);
+
+    Artisan::call('generate:mermaid-erd', ['--output' => 'stdout']);
+    $output = Artisan::output();
+
+    expect($output)
+        ->toContain('posts ||--o{ reviews : "morphMany via reviewable"')
+        ->toContain('videos ||--o{ reviews : "morphMany via reviewable"');
+});
+
 it('supports the --tables option', function () {
     Artisan::call('generate:mermaid-erd', ['--output' => 'stdout', '--tables' => 'users,posts']);
 

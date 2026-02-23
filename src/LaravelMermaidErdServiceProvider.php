@@ -26,5 +26,12 @@ class LaravelMermaidErdServiceProvider extends PackageServiceProvider
                 config('mermaid-erd.ignore_tables', []),
             );
         });
+
+        $this->app->bind(MermaidErdGenerator::class, function ($app) {
+            return new MermaidErdGenerator(
+                $app->make(DatabaseInformationService::class),
+                config('mermaid-erd.polymorphic_relationships', []),
+            );
+        });
     }
 }

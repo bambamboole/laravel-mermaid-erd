@@ -13,6 +13,11 @@ return [
         'cache_locks',
     ],
 
+    'polymorphic_relationships' => [
+        // 'table.morph_name' => [target_tables]
+        // 'comments.commentable' => ['posts', 'videos'],
+    ],
+
     'web' => [
         'enabled' => true,
         'route' => '/mermaid-erd',
