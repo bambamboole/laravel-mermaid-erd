@@ -132,10 +132,10 @@ it('retrieves column types from a real database', function () {
 
     $service = new DatabaseInformationService($this->app['db']->connection());
 
-    // id is bigint on MySQL/PG (via $table->id()), integer on SQLite
-    expect($service->getColumnType('test_items', 'id'))->toBeIn(['integer', 'bigint']);
+    // id is bigint/int8 on MySQL/PG (via $table->id()), integer on SQLite
+    expect($service->getColumnType('test_items', 'id'))->toBeIn(['integer', 'bigint', 'int8']);
     expect($service->getColumnType('test_items', 'name'))->toBeIn(['string', 'varchar', 'character varying']);
-    expect($service->getColumnType('test_items', 'quantity'))->toBeIn(['integer', 'int']);
+    expect($service->getColumnType('test_items', 'quantity'))->toBeIn(['integer', 'int', 'int4']);
 
     $schema->dropIfExists('test_items');
 });
