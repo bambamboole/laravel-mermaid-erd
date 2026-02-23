@@ -15,15 +15,15 @@ class DatabaseInformationService
 
     public function getTables(): array
     {
-        $property = "Tables_in_{$this->db->getDatabaseName()}";
-        $tableNames = array_map(fn ($table) => $table->$property, $this->db->select('SHOW TABLES'));
+        $tables = $this->db->getSchemaBuilder()->getTables();
+        $tableNames = array_map(fn (array $table) => $table['name'], $tables);
 
-        return array_filter($tableNames, fn ($tableName) => ! in_array($tableName, $this->ignoreTables));
+        return array_values(array_filter($tableNames, fn ($tableName) => ! in_array($tableName, $this->ignoreTables)));
     }
 
     public function getForeignKeys(string $table): array
     {
-        return $this->db->select("SHOW KEYS FROM `{$table}` WHERE Key_name like '%_foreign'");
+        return $this->db->getSchemaBuilder()->getForeignKeys($table);
     }
 
     public function getColumnListing(string $table): array

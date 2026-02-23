@@ -51,11 +51,9 @@ class MermaidErdGenerator
         $foreignKeys = $this->databaseInformationService->getForeignKeys($table);
 
         foreach ($foreignKeys as $foreignKey) {
-            // Assuming foreign key is named as <table>_id for simplicity
-            if (preg_match('/(.+)_id$/', $foreignKey->Column_name, $matches)) {
-                $relatedTable = $matches[1];
-                $relationships .= "    {$relatedTable}s ||--o{ {$table} : \"has many via {$foreignKey->Column_name}\"\n";
-            }
+            $foreignTable = $foreignKey['foreign_table'];
+            $columnName = $foreignKey['columns'][0];
+            $relationships .= "    {$foreignTable} ||--o{ {$table} : \"has many via {$columnName}\"\n";
         }
 
         return $relationships;
