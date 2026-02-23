@@ -13,14 +13,23 @@ return [
         'cache_locks',
     ],
 
-    'route' => [
+    'web' => [
         'enabled' => true,
-        'path' => '/mermaid-erd',
+        'route' => '/mermaid-erd',
         'middleware' => ['web'],
-    ],
 
-    'cache' => [
-        'enabled' => false,
-        'ttl' => 3600,
+        'cache' => [
+            'enabled' => false,
+            'ttl' => 3600,
+        ],
+
+        'mermaid' => [
+            'theme' => 'default',
+            'securityLevel' => 'loose',
+            'logLevel' => 'error',
+            'er' => [
+                'useMaxWidth' => false,
+            ],
+        ],
     ],
 ];

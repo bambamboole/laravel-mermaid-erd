@@ -6,7 +6,7 @@ class MermaidErdRouteCustomPathTest extends TestCase
     public function getEnvironmentSetUp($app): void
     {
         parent::getEnvironmentSetUp($app);
-        $app['config']->set('mermaid-erd.route.path', '/custom-erd');
+        $app['config']->set('mermaid-erd.web.route', '/custom-erd');
     }
 
     public function test_returns_200_at_custom_path(): void

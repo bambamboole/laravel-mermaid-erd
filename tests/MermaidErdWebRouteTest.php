@@ -2,11 +2,18 @@
 
 use Illuminate\Support\Facades\Cache;
 
-it('returns 200 with html content type', function () {
+it('returns 200', function () {
+    $this->get('/mermaid-erd')->assertOk();
+});
+
+it('uses the diagram blade view', function () {
     $response = $this->get('/mermaid-erd');
 
     $response->assertOk();
-    $response->assertHeader('Content-Type', 'text/html; charset=UTF-8');
+    $response->assertViewIs('mermaid-erd::diagram');
+    $response->assertViewHas('connectionName');
+    $response->assertViewHas('diagram');
+    $response->assertViewHas('mermaidConfig');
 });
 
 it('contains required html structure', function () {
@@ -15,7 +22,8 @@ it('contains required html structure', function () {
     $response->assertOk();
     $response->assertSee('<!DOCTYPE html>', false);
     $response->assertSee('mermaid.min.js', false);
-    $response->assertSee('<pre class="mermaid">', false);
+    $response->assertSee('<pre class="mermaid', false);
+    $response->assertSee('tailwindcss', false);
 });
 
 it('contains diagram with table names', function () {
@@ -29,8 +37,27 @@ it('contains diagram with table names', function () {
     $response->assertSee('tags', false);
 });
 
+it('contains mermaid config from configuration', function () {
+    $response = $this->get('/mermaid-erd');
+
+    $response->assertOk();
+    $response->assertSee('mermaid.initialize(', false);
+    $response->assertSee('"theme":', false);
+    $response->assertSee('"securityLevel":', false);
+});
+
+it('contains zoom controls', function () {
+    $response = $this->get('/mermaid-erd');
+
+    $response->assertOk();
+    $response->assertSee('id="zoom-level"', false);
+    $response->assertSee('zoomIn()', false);
+    $response->assertSee('zoomOut()', false);
+    $response->assertSee('resetView()', false);
+});
+
 it('does not cache when cache is disabled', function () {
-    config()->set('mermaid-erd.cache.enabled', false);
+    config()->set('mermaid-erd.web.cache.enabled', false);
 
     $this->get('/mermaid-erd')->assertOk();
 
@@ -39,8 +66,8 @@ it('does not cache when cache is disabled', function () {
 });
 
 it('caches diagram when cache is enabled', function () {
-    config()->set('mermaid-erd.cache.enabled', true);
-    config()->set('mermaid-erd.cache.ttl', 3600);
+    config()->set('mermaid-erd.web.cache.enabled', true);
+    config()->set('mermaid-erd.web.cache.ttl', 3600);
 
     $this->get('/mermaid-erd')->assertOk();
 

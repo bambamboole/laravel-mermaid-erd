@@ -13,6 +13,7 @@ class LaravelMermaidErdServiceProvider extends PackageServiceProvider
         $package
             ->name('laravel-mermaid-erd')
             ->hasConfigFile()
+            ->hasViews()
             ->hasRoute('web')
             ->hasCommand(LaravelMermaidErdCommand::class);
     }
