@@ -19,10 +19,19 @@ function assertDiagramStructure(string $output): void
         ->toContain('tags {')
         ->toContain('users {')
         ->not->toContain('post_tag {')
+        // PK/FK/UK markers
+        ->toMatch('/users \{[^}]*integer id PK/s')
+        ->toMatch('/users \{[^}]*varchar email UK/s')
+        ->toMatch('/posts \{[^}]*integer id PK/s')
+        ->toMatch('/posts \{[^}]*integer user_id FK/s')
+        ->toMatch('/tags \{[^}]*varchar slug UK/s')
+        ->toMatch('/comments \{[^}]*integer post_id FK/s')
+        ->toMatch('/comments \{[^}]*integer user_id FK/s')
+        // Relationships with cascade info
         ->toContain('posts }o--o{ tags : "post_tag"')
-        ->toContain('comments : "has many via user_id"')
-        ->toContain('comments : "has many via post_id"')
-        ->toContain('posts : "has many via user_id"');
+        ->toContain('comments : "has many via user_id, cascade delete"')
+        ->toContain('comments : "has many via post_id, cascade delete"')
+        ->toContain('posts : "has many via user_id, cascade delete"');
 }
 
 it('outputs diagram to stdout', function () {

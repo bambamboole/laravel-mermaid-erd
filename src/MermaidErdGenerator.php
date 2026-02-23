@@ -35,9 +35,41 @@ class MermaidErdGenerator
     {
         $diagram = "    {$table} {\n";
 
+        $primaryKeyColumns = $this->getPrimaryKeyColumns($table);
+        $foreignKeyColumns = $this->getForeignKeyColumns($table);
+        $uniqueColumns = $this->getUniqueColumns($table);
+
         $columns = $this->databaseInformationService->getColumns($table);
         foreach ($columns as $column) {
-            $diagram .= "        {$column['type_name']} {$column['name']}\n";
+            $name = $column['name'];
+            $line = "        {$column['type_name']} {$name}";
+
+            $constraints = [];
+            if (in_array($name, $primaryKeyColumns)) {
+                $constraints[] = 'PK';
+            }
+            if (in_array($name, $foreignKeyColumns)) {
+                $constraints[] = 'FK';
+            }
+            if (in_array($name, $uniqueColumns) && !in_array($name, $primaryKeyColumns)) {
+                $constraints[] = 'UK';
+            }
+            if ($constraints !== []) {
+                $line .= ' '.implode(', ', $constraints);
+            }
+
+            $comments = [];
+            if ($column['nullable']) {
+                $comments[] = 'nullable';
+            }
+            if ($column['default'] !== null) {
+                $comments[] = "default: {$column['default']}";
+            }
+            if ($comments !== []) {
+                $line .= ' "'.implode(', ', $comments).'"';
+            }
+
+            $diagram .= $line."\n";
         }
 
         $diagram .= "    }\n";
@@ -59,8 +91,17 @@ class MermaidErdGenerator
             }
 
             $columnName = $foreignKey['columns'][0];
-            $cardinality = in_array($columnName, $uniqueColumns) ? '||--||' : '||--o{';
-            $relationships .= "    {$foreignTable} {$cardinality} {$table} : \"has many via {$columnName}\"\n";
+            $isOneToOne = in_array($columnName, $uniqueColumns);
+            $cardinality = $isOneToOne ? '||--||' : '||--o{';
+            $label = $isOneToOne ? 'has one' : 'has many';
+            $label .= " via {$columnName}";
+
+            $onDelete = $foreignKey['on_delete'] ?? '';
+            if ($onDelete !== '' && !in_array(strtolower($onDelete), ['no action', 'restrict'])) {
+                $label .= ", {$onDelete} delete";
+            }
+
+            $relationships .= "    {$foreignTable} {$cardinality} {$table} : \"{$label}\"\n";
         }
 
         return $relationships;
@@ -101,6 +142,30 @@ class MermaidErdGenerator
         }
 
         return $pivots;
+    }
+
+    private function getPrimaryKeyColumns(string $table): array
+    {
+        $indexes = $this->databaseInformationService->getIndexes($table);
+
+        foreach ($indexes as $index) {
+            if ($index['primary']) {
+                return $index['columns'];
+            }
+        }
+
+        return [];
+    }
+
+    private function getForeignKeyColumns(string $table): array
+    {
+        $foreignKeys = $this->databaseInformationService->getForeignKeys($table);
+
+        if ($foreignKeys === []) {
+            return [];
+        }
+
+        return array_unique(array_merge(...array_map(fn (array $fk) => $fk['columns'], $foreignKeys)));
     }
 
     private function getUniqueColumns(string $table): array
