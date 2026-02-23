@@ -5,14 +5,14 @@ use Illuminate\Support\Facades\Artisan;
 
 it('runs the generate:mermaid-erd command', function () {
     $schema = $this->app['db']->connection()->getSchemaBuilder();
-    $schema->create('users', function ($table) {
+    $schema->create('cmd_users', function ($table) {
         $table->id();
         $table->string('name');
         $table->string('email');
     });
-    $schema->create('posts', function ($table) {
+    $schema->create('cmd_posts', function ($table) {
         $table->id();
-        $table->foreignId('user_id')->constrained('users');
+        $table->foreignId('cmd_user_id')->constrained('cmd_users');
         $table->string('title');
     });
 
@@ -24,13 +24,16 @@ it('runs the generate:mermaid-erd command', function () {
     $output = Artisan::output();
 
     expect($output)->toContain('erDiagram')
-        ->toContain('users {')
-        ->toContain('posts {');
+        ->toContain('cmd_users {')
+        ->toContain('cmd_posts {');
+
+    $schema->dropIfExists('cmd_posts');
+    $schema->dropIfExists('cmd_users');
 });
 
 it('outputs valid mermaid erDiagram syntax', function () {
     $schema = $this->app['db']->connection()->getSchemaBuilder();
-    $schema->create('categories', function ($table) {
+    $schema->create('cmd_categories', function ($table) {
         $table->id();
         $table->string('name');
     });
@@ -43,5 +46,7 @@ it('outputs valid mermaid erDiagram syntax', function () {
     $output = Artisan::output();
 
     expect($output)->toContain('erDiagram')
-        ->toContain('categories {');
+        ->toContain('cmd_categories {');
+
+    $schema->dropIfExists('cmd_categories');
 });
