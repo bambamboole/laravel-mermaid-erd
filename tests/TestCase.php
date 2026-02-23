@@ -3,20 +3,10 @@
 namespace Bambamboole\LaravelMermaidErd\Tests;
 
 use Bambamboole\LaravelMermaidErd\LaravelMermaidErdServiceProvider;
-use Illuminate\Database\Eloquent\Factories\Factory;
 use Orchestra\Testbench\TestCase as Orchestra;
 
 class TestCase extends Orchestra
 {
-    protected function setUp(): void
-    {
-        parent::setUp();
-
-        Factory::guessFactoryNamesUsing(
-            fn (string $modelName) => 'Bambamboole\\LaravelMermaidErd\\Database\\Factories\\'.class_basename($modelName).'Factory'
-        );
-    }
-
     protected function getPackageProviders($app)
     {
         return [
@@ -29,7 +19,13 @@ class TestCase extends Orchestra
         $connection = env('DB_CONNECTION', 'testing');
         config()->set('database.default', $connection);
 
-        if ($connection === 'mysql') {
+        if ($connection === 'testing') {
+            config()->set('database.connections.testing', [
+                'driver' => 'sqlite',
+                'database' => ':memory:',
+                'prefix' => '',
+            ]);
+        } elseif ($connection === 'mysql') {
             config()->set('database.connections.mysql', [
                 'driver' => 'mysql',
                 'host' => env('DB_HOST', '127.0.0.1'),
@@ -54,5 +50,10 @@ class TestCase extends Orchestra
                 'prefix' => '',
             ]);
         }
+    }
+
+    protected function defineDatabaseMigrations(): void
+    {
+        $this->loadMigrationsFrom(__DIR__.'/../workbench/database/migrations');
     }
 }

@@ -1,52 +1,75 @@
 <?php
 
-use Bambamboole\LaravelMermaidErd\DatabaseInformationService;
 use Illuminate\Support\Facades\Artisan;
 
-it('runs the generate:mermaid-erd command', function () {
-    $schema = $this->app['db']->connection()->getSchemaBuilder();
-    $schema->create('cmd_users', function ($table) {
-        $table->id();
-        $table->string('name');
-        $table->string('email');
-    });
-    $schema->create('cmd_posts', function ($table) {
-        $table->id();
-        $table->foreignId('cmd_user_id')->constrained('cmd_users');
-        $table->string('title');
-    });
+function loadFixture(string $name): string
+{
+    return file_get_contents(__DIR__.'/fixtures/'.$name);
+}
 
-    $this->app->bind(DatabaseInformationService::class, function () {
-        return new DatabaseInformationService($this->app['db']->connection());
-    });
+function copyFixtureToTemp(string $name): string
+{
+    $path = tempnam(sys_get_temp_dir(), 'mermaid_test_');
+    copy(__DIR__.'/fixtures/'.$name, $path);
 
-    Artisan::call('generate:mermaid-erd');
-    $output = Artisan::output();
+    return $path;
+}
 
-    expect($output)->toContain('erDiagram')
-        ->toContain('cmd_users {')
-        ->toContain('cmd_posts {');
+it('outputs diagram to stdout', function () {
+    Artisan::call('generate:mermaid-erd', ['--output' => 'stdout']);
 
-    $schema->dropIfExists('cmd_posts');
-    $schema->dropIfExists('cmd_users');
+    expect(Artisan::output())->toBe(loadFixture('expected-diagram.txt')."\n");
 });
 
-it('outputs valid mermaid erDiagram syntax', function () {
-    $schema = $this->app['db']->connection()->getSchemaBuilder();
-    $schema->create('cmd_categories', function ($table) {
-        $table->id();
-        $table->string('name');
-    });
+it('writes diagram to a file', function () {
+    $path = tempnam(sys_get_temp_dir(), 'mermaid_test_');
 
-    $this->app->bind(DatabaseInformationService::class, function () {
-        return new DatabaseInformationService($this->app['db']->connection());
-    });
+    $this->artisan('generate:mermaid-erd', ['--output' => 'file', '--path' => $path])
+        ->assertSuccessful();
 
-    Artisan::call('generate:mermaid-erd');
-    $output = Artisan::output();
+    expect(file_get_contents($path))->toBe(loadFixture('expected-file-output.md'));
 
-    expect($output)->toContain('erDiagram')
-        ->toContain('cmd_categories {');
+    unlink($path);
+});
 
-    $schema->dropIfExists('cmd_categories');
+it('injects diagram into readme between tags', function () {
+    $path = copyFixtureToTemp('readme-with-tags.md');
+
+    $this->artisan('generate:mermaid-erd', ['--output' => 'readme', '--path' => $path])
+        ->assertSuccessful();
+
+    expect(file_get_contents($path))->toBe(loadFixture('expected-readme-with-tags.md'));
+
+    unlink($path);
+});
+
+it('replaces existing diagram content between readme tags', function () {
+    $path = copyFixtureToTemp('readme-with-old-content.md');
+
+    $this->artisan('generate:mermaid-erd', ['--output' => 'readme', '--path' => $path])
+        ->assertSuccessful();
+
+    $content = file_get_contents($path);
+
+    expect($content)
+        ->not->toContain('old content here')
+        ->toContain('erDiagram');
+
+    unlink($path);
+});
+
+it('appends diagram with heading when readme tags are missing', function () {
+    $path = copyFixtureToTemp('readme-without-tags.md');
+
+    $this->artisan('generate:mermaid-erd', ['--output' => 'readme', '--path' => $path])
+        ->assertSuccessful();
+
+    expect(file_get_contents($path))->toBe(loadFixture('expected-readme-without-tags.md'));
+
+    unlink($path);
+});
+
+it('fails when readme file does not exist', function () {
+    $this->artisan('generate:mermaid-erd', ['--output' => 'readme', '--path' => '/tmp/nonexistent_readme.md'])
+        ->assertFailed();
 });
