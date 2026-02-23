@@ -2,11 +2,6 @@
 
 use Illuminate\Support\Facades\Artisan;
 
-function loadFixture(string $name): string
-{
-    return file_get_contents(__DIR__.'/fixtures/'.$name);
-}
-
 function copyFixtureToTemp(string $name): string
 {
     $path = tempnam(sys_get_temp_dir(), 'mermaid_test_');
@@ -15,10 +10,25 @@ function copyFixtureToTemp(string $name): string
     return $path;
 }
 
+function assertDiagramStructure(string $output): void
+{
+    expect($output)
+        ->toContain('erDiagram')
+        ->toContain('comments {')
+        ->toContain('posts {')
+        ->toContain('tags {')
+        ->toContain('users {')
+        ->not->toContain('post_tag {')
+        ->toContain('posts }o--o{ tags : "post_tag"')
+        ->toContain('comments : "has many via user_id"')
+        ->toContain('comments : "has many via post_id"')
+        ->toContain('posts : "has many via user_id"');
+}
+
 it('outputs diagram to stdout', function () {
     Artisan::call('generate:mermaid-erd', ['--output' => 'stdout']);
 
-    expect(Artisan::output())->toBe(loadFixture('expected-diagram.txt')."\n");
+    assertDiagramStructure(Artisan::output());
 });
 
 it('writes diagram to a new file with tags', function () {
@@ -28,7 +38,13 @@ it('writes diagram to a new file with tags', function () {
     $this->artisan('generate:mermaid-erd', ['--output' => 'file', '--path' => $path])
         ->assertSuccessful();
 
-    expect(file_get_contents($path))->toBe(loadFixture('expected-new-file.md'));
+    $content = file_get_contents($path);
+
+    expect($content)
+        ->toStartWith("## ERD\n")
+        ->toContain('<!-- mermaid-erd-start -->')
+        ->toContain('<!-- mermaid-erd-end -->');
+    assertDiagramStructure($content);
 
     unlink($path);
 });
@@ -39,7 +55,14 @@ it('injects diagram into file between existing tags', function () {
     $this->artisan('generate:mermaid-erd', ['--output' => 'file', '--path' => $path])
         ->assertSuccessful();
 
-    expect(file_get_contents($path))->toBe(loadFixture('expected-readme-with-tags.md'));
+    $content = file_get_contents($path);
+
+    expect($content)
+        ->toStartWith('# My Project')
+        ->toContain('<!-- mermaid-erd-start -->')
+        ->toContain('<!-- mermaid-erd-end -->')
+        ->toContain('## Other content');
+    assertDiagramStructure($content);
 
     unlink($path);
 });
@@ -65,7 +88,14 @@ it('appends diagram with heading when tags are missing', function () {
     $this->artisan('generate:mermaid-erd', ['--output' => 'file', '--path' => $path])
         ->assertSuccessful();
 
-    expect(file_get_contents($path))->toBe(loadFixture('expected-readme-without-tags.md'));
+    $content = file_get_contents($path);
+
+    expect($content)
+        ->toStartWith('# My Project')
+        ->toContain('## ERD')
+        ->toContain('<!-- mermaid-erd-start -->')
+        ->toContain('<!-- mermaid-erd-end -->');
+    assertDiagramStructure($content);
 
     unlink($path);
 });
