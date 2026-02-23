@@ -1,6 +1,5 @@
 <?php declare(strict_types=1);
 
-// config for Bambamboole/LaravelMermaidErd
 return [
     'ignore_tables' => [
         'migrations',
@@ -12,5 +11,16 @@ return [
         'job_batches',
         'cache',
         'cache_locks',
+    ],
+
+    'route' => [
+        'enabled' => true,
+        'path' => '/mermaid-erd',
+        'middleware' => ['web'],
+    ],
+
+    'cache' => [
+        'enabled' => false,
+        'ttl' => 3600,
     ],
 ];
