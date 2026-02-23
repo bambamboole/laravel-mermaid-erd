@@ -1,4 +1,4 @@
-<?php
+<?php declare(strict_types=1);
 
 use Illuminate\Support\Facades\Artisan;
 
@@ -21,21 +21,22 @@ it('outputs diagram to stdout', function () {
     expect(Artisan::output())->toBe(loadFixture('expected-diagram.txt')."\n");
 });
 
-it('writes diagram to a file', function () {
+it('writes diagram to a new file with tags', function () {
     $path = tempnam(sys_get_temp_dir(), 'mermaid_test_');
+    unlink($path);
 
     $this->artisan('generate:mermaid-erd', ['--output' => 'file', '--path' => $path])
         ->assertSuccessful();
 
-    expect(file_get_contents($path))->toBe(loadFixture('expected-file-output.md'));
+    expect(file_get_contents($path))->toBe(loadFixture('expected-new-file.md'));
 
     unlink($path);
 });
 
-it('injects diagram into readme between tags', function () {
+it('injects diagram into file between existing tags', function () {
     $path = copyFixtureToTemp('readme-with-tags.md');
 
-    $this->artisan('generate:mermaid-erd', ['--output' => 'readme', '--path' => $path])
+    $this->artisan('generate:mermaid-erd', ['--output' => 'file', '--path' => $path])
         ->assertSuccessful();
 
     expect(file_get_contents($path))->toBe(loadFixture('expected-readme-with-tags.md'));
@@ -43,10 +44,10 @@ it('injects diagram into readme between tags', function () {
     unlink($path);
 });
 
-it('replaces existing diagram content between readme tags', function () {
+it('replaces existing diagram content between tags', function () {
     $path = copyFixtureToTemp('readme-with-old-content.md');
 
-    $this->artisan('generate:mermaid-erd', ['--output' => 'readme', '--path' => $path])
+    $this->artisan('generate:mermaid-erd', ['--output' => 'file', '--path' => $path])
         ->assertSuccessful();
 
     $content = file_get_contents($path);
@@ -58,10 +59,10 @@ it('replaces existing diagram content between readme tags', function () {
     unlink($path);
 });
 
-it('appends diagram with heading when readme tags are missing', function () {
+it('appends diagram with heading when tags are missing', function () {
     $path = copyFixtureToTemp('readme-without-tags.md');
 
-    $this->artisan('generate:mermaid-erd', ['--output' => 'readme', '--path' => $path])
+    $this->artisan('generate:mermaid-erd', ['--output' => 'file', '--path' => $path])
         ->assertSuccessful();
 
     expect(file_get_contents($path))->toBe(loadFixture('expected-readme-without-tags.md'));
@@ -69,7 +70,21 @@ it('appends diagram with heading when readme tags are missing', function () {
     unlink($path);
 });
 
-it('fails when readme file does not exist', function () {
-    $this->artisan('generate:mermaid-erd', ['--output' => 'readme', '--path' => '/tmp/nonexistent_readme.md'])
-        ->assertFailed();
+it('supports the --connection option', function () {
+    Artisan::call('generate:mermaid-erd', ['--output' => 'stdout', '--connection' => config('database.default')]);
+
+    expect(Artisan::output())->toContain('erDiagram');
+});
+
+it('supports the --tables option', function () {
+    Artisan::call('generate:mermaid-erd', ['--output' => 'stdout', '--tables' => 'users,posts']);
+
+    $output = Artisan::output();
+
+    expect($output)
+        ->toContain('users {')
+        ->toContain('posts {')
+        ->not->toContain('comments {')
+        ->not->toContain('tags {')
+        ->not->toContain('post_tag {');
 });

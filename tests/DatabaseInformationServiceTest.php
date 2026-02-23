@@ -1,4 +1,4 @@
-<?php
+<?php declare(strict_types=1);
 
 use Bambamboole\LaravelMermaidErd\DatabaseInformationService;
 
@@ -24,24 +24,31 @@ it('retrieves foreign keys from a real database', function () {
     expect($foreignTables)->toContain('posts')->toContain('users');
 });
 
-it('retrieves column listing from a real database', function () {
+it('retrieves columns from a real database', function () {
     $service = new DatabaseInformationService($this->app['db']->connection());
-    $columns = $service->getColumnListing('users');
+    $columns = $service->getColumns('users');
 
-    expect($columns)->toBe(['id', 'name', 'email', 'created_at', 'updated_at']);
+    $names = array_column($columns, 'name');
+    expect($names)->toBe(['id', 'name', 'email', 'created_at', 'updated_at']);
+
+    $types = array_column($columns, 'type_name');
+    expect($types[0])->toBeIn(['integer', 'bigint', 'int8']);
+    expect($types[1])->toBeIn(['varchar', 'character varying']);
 });
 
-it('retrieves column types from a real database', function () {
+it('retrieves indexes from a real database', function () {
     $service = new DatabaseInformationService($this->app['db']->connection());
+    $indexes = $service->getIndexes('users');
 
-    expect($service->getColumnType('users', 'id'))->toBeIn(['integer', 'bigint', 'int8']);
-    expect($service->getColumnType('users', 'name'))->toBeIn(['string', 'varchar', 'character varying']);
+    $primaryIndex = collect($indexes)->first(fn (array $index) => $index['primary']);
+    expect($primaryIndex)->not->toBeNull();
+    expect($primaryIndex['columns'])->toBe(['id']);
 });
 
 it('filters ignored tables from a real database', function () {
     $service = new DatabaseInformationService(
         $this->app['db']->connection(),
-        ['posts', 'comments']
+        ['posts', 'comments'],
     );
     $tables = $service->getTables();
 
@@ -50,4 +57,20 @@ it('filters ignored tables from a real database', function () {
         ->toContain('tags')
         ->not->toContain('posts')
         ->not->toContain('comments');
+});
+
+it('filters to only specified tables', function () {
+    $service = new DatabaseInformationService(
+        $this->app['db']->connection(),
+        [],
+        ['users', 'posts'],
+    );
+    $tables = $service->getTables();
+
+    expect($tables)
+        ->toContain('users')
+        ->toContain('posts')
+        ->not->toContain('comments')
+        ->not->toContain('tags')
+        ->not->toContain('post_tag');
 });

@@ -15,13 +15,6 @@ erDiagram
         datetime created_at
         datetime updated_at
     }
-    post_tag {
-        integer id
-        integer post_id
-        integer tag_id
-        datetime created_at
-        datetime updated_at
-    }
     posts {
         integer id
         integer user_id
@@ -46,8 +39,7 @@ erDiagram
     }
     users ||--o{ comments : "has many via user_id"
     posts ||--o{ comments : "has many via post_id"
-    tags ||--o{ post_tag : "has many via tag_id"
-    posts ||--o{ post_tag : "has many via post_id"
     users ||--o{ posts : "has many via user_id"
+    posts }o--o{ tags : "post_tag"
 ```
 <!-- mermaid-erd-end -->

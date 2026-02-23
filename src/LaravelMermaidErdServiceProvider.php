@@ -1,5 +1,5 @@
 <?php
-
+declare(strict_types=1);
 namespace Bambamboole\LaravelMermaidErd;
 
 use Bambamboole\LaravelMermaidErd\Commands\LaravelMermaidErdCommand;
@@ -10,11 +10,6 @@ class LaravelMermaidErdServiceProvider extends PackageServiceProvider
 {
     public function configurePackage(Package $package): void
     {
-        /*
-         * This class is a Package Service Provider
-         *
-         * More info: https://github.com/spatie/laravel-package-tools
-         */
         $package
             ->name('laravel-mermaid-erd')
             ->hasConfigFile()
@@ -26,7 +21,7 @@ class LaravelMermaidErdServiceProvider extends PackageServiceProvider
         $this->app->bind(DatabaseInformationService::class, function ($app) {
             return new DatabaseInformationService(
                 $app->make('db')->connection(),
-                config('mermaid-erd.ignore_tables', [])
+                config('mermaid-erd.ignore_tables', []),
             );
         });
     }

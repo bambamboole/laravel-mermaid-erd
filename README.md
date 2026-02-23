@@ -40,25 +40,39 @@ Prints the Mermaid ERD diagram directly to the console.
 #### Write to a file
 
 ```bash
-php artisan generate:mermaid-erd --output=file --path=docs/erd.md
+php artisan generate:mermaid-erd --output=file --path=README.md
 ```
 
-Writes the diagram wrapped in a mermaid code block to the specified file.
+Writes the diagram to the specified file (defaults to `README.md`). The file output uses `<!-- mermaid-erd-start -->` / `<!-- mermaid-erd-end -->` comment tags:
 
-#### Inject into your README
+- **File has tags**: replaces content between the tags
+- **File exists without tags**: appends an `## ERD` section with the diagram
+- **File doesn't exist**: creates it with the diagram
 
-```bash
-php artisan generate:mermaid-erd --output=readme --path=README.md
-```
-
-Replaces the content between special comment tags in your README with the generated diagram. Add these tags where you want the diagram to appear:
+Add these tags where you want the diagram to appear:
 
 ```markdown
 <!-- mermaid-erd-start -->
 <!-- mermaid-erd-end -->
 ```
 
-The command will inject the diagram between these tags, preserving the rest of your README.
+### Options
+
+#### `--connection`
+
+Use a specific database connection instead of the default:
+
+```bash
+php artisan generate:mermaid-erd --output=stdout --connection=mysql
+```
+
+#### `--tables`
+
+Only include specific tables (comma-separated):
+
+```bash
+php artisan generate:mermaid-erd --output=stdout --tables=users,posts,comments
+```
 
 ### Configuration
 
@@ -74,6 +88,10 @@ return [
     ],
 ];
 ```
+
+### Smart relationship detection
+
+The generator automatically detects pivot tables (tables with exactly 2 foreign keys and only `id`/timestamp columns) and renders them as many-to-many relationships instead of separate entities. Foreign key columns with unique indexes are rendered as one-to-one relationships.
 
 ## ERD
 

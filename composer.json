@@ -35,8 +35,7 @@
     },
     "autoload": {
         "psr-4": {
-            "Bambamboole\\LaravelMermaidErd\\": "src/",
-            "Bambamboole\\LaravelMermaidErd\\Database\\Factories\\": "database/factories/"
+            "Bambamboole\\LaravelMermaidErd\\": "src/"
         }
     },
     "autoload-dev": {
@@ -74,10 +73,7 @@
         "laravel": {
             "providers": [
                 "Bambamboole\\LaravelMermaidErd\\LaravelMermaidErdServiceProvider"
-            ],
-            "aliases": {
-                "LaravelMermaidErd": "Bambamboole\\LaravelMermaidErd\\Facades\\LaravelMermaidErd"
-            }
+            ]
         }
     },
     "minimum-stability": "dev",
