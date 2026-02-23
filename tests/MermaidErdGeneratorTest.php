@@ -27,7 +27,7 @@ it('generates a simple ERD', function () {
     ]);
     $this->databaseInformationServiceMock->method('getForeignKeys')->willReturnMap([
         ['users', []],
-        ['posts', [(object) ['Column_name' => 'user_id']]],
+        ['posts', [['name' => 'posts_user_id_foreign', 'columns' => ['user_id'], 'foreign_schema' => null, 'foreign_table' => 'users', 'foreign_columns' => ['id']]]],
     ]);
 
     $expectedOutput = "erDiagram\n    users {\n        int id\n        string name\n        string email\n    }\n    posts {\n        int id\n        int user_id\n        string title\n        string content\n    }\n    users ||--o{ posts : \"has many via user_id\"\n";
