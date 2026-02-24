@@ -2,6 +2,10 @@
 
 All notable changes to `laravel-mermaid-erd` will be documented in this file.
 
+## 0.3.3 - 2026-02-24
+
+**Full Changelog**: https://github.com/bambamboole/laravel-mermaid-erd/compare/0.3.2...0.3.3
+
 ## 0.3.2 - 2026-02-24
 
 **Full Changelog**: https://github.com/bambamboole/laravel-mermaid-erd/compare/0.3.1...0.3.2
