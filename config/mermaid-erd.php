@@ -13,6 +13,8 @@ return [
         'cache_locks',
     ],
 
+    'guess_relationships' => true,
+
     'polymorphic_relationships' => [
         // 'table.morph_name' => [target_tables]
         // 'comments.commentable' => ['posts', 'videos'],

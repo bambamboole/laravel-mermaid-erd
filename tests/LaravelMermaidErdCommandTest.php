@@ -201,3 +201,42 @@ it('includes per-table column count in table header', function () {
         ->toContain('users["users (5)"]')
         ->toContain('posts["posts (6)"]');
 });
+
+it('guesses relationships for _id columns without FK constraints', function () {
+    Artisan::call('generate:mermaid-erd', ['--output' => 'stdout']);
+    $output = Artisan::output();
+
+    expect($output)
+        ->toContain('users ||--o{ ai_messages : "guessed has many via user_id"');
+});
+
+it('does not guess relationships when config is disabled', function () {
+    config()->set('mermaid-erd.guess_relationships', false);
+
+    Artisan::call('generate:mermaid-erd', ['--output' => 'stdout']);
+    $output = Artisan::output();
+
+    expect($output)
+        ->not->toContain('guessed has many');
+});
+
+it('shows unmapped polymorphic relations as comments', function () {
+    Artisan::call('generate:mermaid-erd', ['--output' => 'stdout']);
+    $output = Artisan::output();
+
+    expect($output)
+        ->toContain("%% Unmapped polymorphic relations (add to config 'mermaid-erd.polymorphic_relationships'):")
+        ->toContain('%%   reviews.reviewable (reviewable_type + reviewable_id)');
+});
+
+it('does not show mapped polymorphic relations in unmapped comments', function () {
+    config()->set('mermaid-erd.polymorphic_relationships', [
+        'reviews.reviewable' => ['posts', 'videos'],
+    ]);
+
+    Artisan::call('generate:mermaid-erd', ['--output' => 'stdout']);
+    $output = Artisan::output();
+
+    expect($output)
+        ->not->toContain('%%   reviews.reviewable');
+});

@@ -31,6 +31,7 @@ class LaravelMermaidErdServiceProvider extends PackageServiceProvider
             return new MermaidErdGenerator(
                 $app->make(DatabaseInformationService::class),
                 config('mermaid-erd.polymorphic_relationships', []),
+                config('mermaid-erd.guess_relationships', true),
             );
         });
     }

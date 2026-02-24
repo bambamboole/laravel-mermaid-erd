@@ -2,11 +2,14 @@
 declare(strict_types=1);
 namespace Bambamboole\LaravelMermaidErd;
 
+use Illuminate\Support\Str;
+
 class MermaidErdGenerator
 {
     public function __construct(
         private readonly DatabaseInformationService $databaseInformationService,
         private readonly array $polymorphicRelationships = [],
+        private readonly bool $guessRelationships = true,
     ) {}
 
     public function generate(): string
@@ -16,10 +19,16 @@ class MermaidErdGenerator
 
         $totalColumns = 0;
         $tableDiagrams = [];
+        $allPolymorphicPairs = [];
         foreach ($tables as $table) {
             $columns = $this->databaseInformationService->getColumns($table);
             $totalColumns += count($columns);
             $tableDiagrams[$table] = $this->generateTableDiagram($table, $columns);
+
+            $columnNames = array_map(fn (array $col) => $col['name'], $columns);
+            foreach ($this->detectPolymorphicPairs($columnNames) as $morphName) {
+                $allPolymorphicPairs[] = "{$table}.{$morphName}";
+            }
         }
 
         $tableCount = count($tables);
@@ -31,12 +40,26 @@ class MermaidErdGenerator
 
         foreach ($tables as $table) {
             $diagram .= $this->generateRelationships($table, $tables, $pivotTableNames);
+
+            if ($this->guessRelationships) {
+                $columns = $this->databaseInformationService->getColumns($table);
+                $diagram .= $this->generateGuessedRelationships($table, $columns, $tables);
+            }
         }
 
         foreach ($this->polymorphicRelationships as $key => $targetTables) {
             [$table, $morphName] = explode('.', $key, 2);
             foreach ($targetTables as $targetTable) {
                 $diagram .= "    {$targetTable} ||--o{ {$table} : \"morphMany via {$morphName}\"\n";
+            }
+        }
+
+        $unmapped = array_diff($allPolymorphicPairs, array_keys($this->polymorphicRelationships));
+        if ($unmapped !== []) {
+            $diagram .= "%% Unmapped polymorphic relations (add to config 'mermaid-erd.polymorphic_relationships'):\n";
+            foreach ($unmapped as $pair) {
+                [$table, $morphName] = explode('.', $pair, 2);
+                $diagram .= "%%   {$pair} ({$morphName}_type + {$morphName}_id)\n";
             }
         }
 
@@ -148,6 +171,50 @@ class MermaidErdGenerator
         return $relationships;
     }
 
+    protected function generateGuessedRelationships(string $table, array $columns, array $activeTables): string
+    {
+        $relationships = '';
+
+        $foreignKeyColumns = $this->getForeignKeyColumns($table);
+        $columnNames = array_map(fn (array $col) => $col['name'], $columns);
+        $polymorphicColumns = $this->detectPolymorphicColumns($columnNames);
+
+        $nullableColumns = array_map(
+            fn (array $col) => $col['name'],
+            array_filter($columns, fn (array $col) => $col['nullable']),
+        );
+
+        foreach ($columns as $column) {
+            $name = $column['name'];
+
+            if (!str_ends_with($name, '_id')) {
+                continue;
+            }
+
+            if (in_array($name, $foreignKeyColumns)) {
+                continue;
+            }
+
+            if (in_array($name, $polymorphicColumns)) {
+                continue;
+            }
+
+            $singular = substr($name, 0, -3);
+            $guessedTable = Str::plural($singular);
+
+            if (!in_array($guessedTable, $activeTables)) {
+                continue;
+            }
+
+            $parentSide = in_array($name, $nullableColumns) ? '|o' : '||';
+            $cardinality = "{$parentSide}--o{";
+
+            $relationships .= "    {$guessedTable} {$cardinality} {$table} : \"guessed has many via {$name}\"\n";
+        }
+
+        return $relationships;
+    }
+
     /**
      * @return array<string, array{name: string, tables: array{0: string, 1: string}}>
      */
@@ -231,6 +298,29 @@ class MermaidErdGenerator
         }
 
         return $polymorphic;
+    }
+
+    /**
+     * @return string[] morph names (e.g. ['reviewable'])
+     */
+    private function detectPolymorphicPairs(array $columnNames): array
+    {
+        $pairs = [];
+
+        foreach ($columnNames as $name) {
+            if (!str_ends_with($name, '_type')) {
+                continue;
+            }
+
+            $morphName = substr($name, 0, -5);
+            $idColumn = $morphName.'_id';
+
+            if (in_array($idColumn, $columnNames)) {
+                $pairs[] = $morphName;
+            }
+        }
+
+        return $pairs;
     }
 
     private function getUniqueColumns(string $table): array

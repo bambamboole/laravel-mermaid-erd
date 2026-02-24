@@ -39,6 +39,7 @@ class LaravelMermaidErdCommand extends Command
         $generator = new MermaidErdGenerator(
             $service,
             config('mermaid-erd.polymorphic_relationships', []),
+            config('mermaid-erd.guess_relationships', true),
         );
         $diagram = $generator->generate();
 
