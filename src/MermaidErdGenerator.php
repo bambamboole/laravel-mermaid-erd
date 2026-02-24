@@ -12,30 +12,25 @@ class MermaidErdGenerator
     public function generate(): string
     {
         $tables = $this->databaseInformationService->getTables();
-        $pivots = $this->detectPivotTables($tables);
-        $nonPivotTables = array_values(array_filter($tables, fn (string $table) => !isset($pivots[$table])));
+        $pivotTableNames = array_keys($this->detectPivotTables($tables));
 
         $totalColumns = 0;
         $tableDiagrams = [];
-        foreach ($nonPivotTables as $table) {
+        foreach ($tables as $table) {
             $columns = $this->databaseInformationService->getColumns($table);
             $totalColumns += count($columns);
             $tableDiagrams[$table] = $this->generateTableDiagram($table, $columns);
         }
 
-        $tableCount = count($nonPivotTables);
+        $tableCount = count($tables);
         $diagram = "---\ntitle: {$tableCount} tables · {$totalColumns} columns\n---\nerDiagram\n";
 
         foreach ($tableDiagrams as $tableDiagram) {
             $diagram .= $tableDiagram;
         }
 
-        foreach ($nonPivotTables as $table) {
-            $diagram .= $this->generateRelationships($table, $tables);
-        }
-
-        foreach ($pivots as $pivot) {
-            $diagram .= "    {$pivot['tables'][0]} }o--o{ {$pivot['tables'][1]} : \"{$pivot['name']}\"\n";
+        foreach ($tables as $table) {
+            $diagram .= $this->generateRelationships($table, $tables, $pivotTableNames);
         }
 
         foreach ($this->polymorphicRelationships as $key => $targetTables) {
@@ -103,7 +98,7 @@ class MermaidErdGenerator
         return $diagram;
     }
 
-    protected function generateRelationships(string $table, array $activeTables): string
+    protected function generateRelationships(string $table, array $activeTables, array $pivotTableNames = []): string
     {
         $relationships = '';
         $foreignKeys = $this->databaseInformationService->getForeignKeys($table);
@@ -141,6 +136,10 @@ class MermaidErdGenerator
             $onDelete = $foreignKey['on_delete'] ?? '';
             if ($onDelete !== '' && !in_array(strtolower($onDelete), ['no action', 'restrict'])) {
                 $label .= ", {$onDelete} delete";
+            }
+
+            if (in_array($table, $pivotTableNames)) {
+                $label = "pivot, {$label}";
             }
 
             $relationships .= "    {$foreignTable} {$cardinality} {$table} : \"{$label}\"\n";

@@ -19,7 +19,7 @@ function assertDiagramStructure(string $output): void
         ->toMatch('/posts\[.*?\] \{/')
         ->toMatch('/tags\[.*?\] \{/')
         ->toMatch('/users\[.*?\] \{/')
-        ->not->toMatch('/post_tag\[.*?\] \{/')
+        ->toMatch('/post_tag\[.*?\] \{/')
         // PK/FK/UK markers
         ->toMatch('/users\[.*?\] \{[^}]*integer id PK/s')
         ->toMatch('/users\[.*?\] \{[^}]*varchar email UK/s')
@@ -29,7 +29,8 @@ function assertDiagramStructure(string $output): void
         ->toMatch('/comments\[.*?\] \{[^}]*integer post_id FK/s')
         ->toMatch('/comments\[.*?\] \{[^}]*integer user_id FK/s')
         // Relationships with cascade info
-        ->toContain('posts }o--o{ tags : "post_tag"')
+        ->toContain('post_tag : "pivot, has many via post_id, cascade delete"')
+        ->toContain('post_tag : "pivot, has many via tag_id, cascade delete"')
         ->toContain('comments : "has many via user_id, cascade delete"')
         ->toContain('comments : "has many via post_id, cascade delete"')
         ->toContain('posts : "has many via user_id, cascade delete"');
@@ -157,6 +158,15 @@ it('supports the --tables option', function () {
         ->not->toMatch('/comments\[.*?\] \{/')
         ->not->toMatch('/tags\[.*?\] \{/')
         ->not->toMatch('/post_tag\[.*?\] \{/');
+});
+
+it('renders pivot tables as full entities with FK columns', function () {
+    Artisan::call('generate:mermaid-erd', ['--output' => 'stdout']);
+    $output = Artisan::output();
+
+    expect($output)
+        ->toMatch('/post_tag\[.*?\] \{[^}]*integer post_id FK/s')
+        ->toMatch('/post_tag\[.*?\] \{[^}]*integer tag_id FK/s');
 });
 
 it('uses nullable parent-side cardinality for nullable foreign keys', function () {
