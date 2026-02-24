@@ -16,6 +16,7 @@ class TestCase extends Orchestra
     public function getEnvironmentSetUp($app)
     {
         $app['config']->set('app.key', 'base64:'.base64_encode(random_bytes(32)));
+        $app['config']->set('cache.default', 'array');
 
         $connection = env('DB_CONNECTION', 'testing');
         config()->set('database.default', $connection);

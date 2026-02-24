@@ -78,3 +78,11 @@ it('caches diagram when cache is enabled', function () {
 it('has named route mermaid-erd', function () {
     expect(route('mermaid-erd'))->toEndWith('/mermaid-erd');
 });
+
+it('contains copy and download buttons', function () {
+    $response = $this->get('/mermaid-erd');
+
+    $response->assertOk();
+    $response->assertSee('copyMermaid()', false);
+    $response->assertSee('downloadSVG()', false);
+});

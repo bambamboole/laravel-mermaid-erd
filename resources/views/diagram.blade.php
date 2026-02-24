@@ -24,6 +24,15 @@
                 class="rounded-md border border-gray-200 bg-white px-3 py-1.5 text-xs text-gray-600 transition hover:border-gray-300 hover:bg-gray-50 cursor-pointer">
                 Reset
             </button>
+            <div class="mx-1 h-5 w-px bg-gray-200"></div>
+            <button onclick="copyMermaid()" id="copy-btn" title="Copy Mermaid source"
+                class="rounded-md border border-gray-200 bg-white px-3 py-1.5 text-xs text-gray-600 transition hover:border-gray-300 hover:bg-gray-50 cursor-pointer">
+                Copy Mermaid
+            </button>
+            <button onclick="downloadSVG()" title="Download SVG"
+                class="rounded-md border border-gray-200 bg-white px-3 py-1.5 text-xs text-gray-600 transition hover:border-gray-300 hover:bg-gray-50 cursor-pointer">
+                Download SVG
+            </button>
         </div>
     </header>
 
@@ -33,6 +42,9 @@
         </div>
     </div>
 
+    <script>
+        const mermaidSource = {!! json_encode($diagram) !!};
+    </script>
     <script src="https://cdn.jsdelivr.net/npm/mermaid/dist/mermaid.min.js"></script>
     <script>
         mermaid.initialize({!! $mermaidConfig !!});
@@ -84,6 +96,31 @@
             container.classList.remove('cursor-grabbing');
             container.classList.add('cursor-grab');
         });
+
+        function copyMermaid() {
+            navigator.clipboard.writeText(mermaidSource).then(function() {
+                var btn = document.getElementById('copy-btn');
+                var original = btn.textContent;
+                btn.textContent = 'Copied!';
+                setTimeout(function() { btn.textContent = original; }, 1500);
+            });
+        }
+
+        function downloadSVG() {
+            var svg = document.querySelector('#diagram-wrapper svg');
+            if (!svg) return;
+            var serializer = new XMLSerializer();
+            var source = serializer.serializeToString(svg);
+            var blob = new Blob([source], { type: 'image/svg+xml;charset=utf-8' });
+            var url = URL.createObjectURL(blob);
+            var a = document.createElement('a');
+            a.href = url;
+            a.download = 'erd.svg';
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            URL.revokeObjectURL(url);
+        }
     </script>
 
     <style>

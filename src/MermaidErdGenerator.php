@@ -15,10 +15,19 @@ class MermaidErdGenerator
         $pivots = $this->detectPivotTables($tables);
         $nonPivotTables = array_values(array_filter($tables, fn (string $table) => !isset($pivots[$table])));
 
-        $diagram = "erDiagram\n";
-
+        $totalColumns = 0;
+        $tableDiagrams = [];
         foreach ($nonPivotTables as $table) {
-            $diagram .= $this->generateTableDiagram($table);
+            $columns = $this->databaseInformationService->getColumns($table);
+            $totalColumns += count($columns);
+            $tableDiagrams[$table] = $this->generateTableDiagram($table, $columns);
+        }
+
+        $tableCount = count($nonPivotTables);
+        $diagram = "---\ntitle: {$tableCount} tables · {$totalColumns} columns\n---\nerDiagram\n";
+
+        foreach ($tableDiagrams as $tableDiagram) {
+            $diagram .= $tableDiagram;
         }
 
         foreach ($nonPivotTables as $table) {
@@ -39,15 +48,15 @@ class MermaidErdGenerator
         return $diagram;
     }
 
-    protected function generateTableDiagram(string $table): string
+    protected function generateTableDiagram(string $table, array $columns): string
     {
-        $diagram = "    {$table} {\n";
+        $columnCount = count($columns);
+        $diagram = "    {$table}[\"{$table} ({$columnCount})\"] {\n";
 
         $primaryKeyColumns = $this->getPrimaryKeyColumns($table);
         $foreignKeyColumns = $this->getForeignKeyColumns($table);
         $uniqueColumns = $this->getUniqueColumns($table);
 
-        $columns = $this->databaseInformationService->getColumns($table);
         $columnNames = array_map(fn (array $col) => $col['name'], $columns);
         $polymorphicColumns = $this->detectPolymorphicColumns($columnNames);
 
@@ -100,6 +109,12 @@ class MermaidErdGenerator
         $foreignKeys = $this->databaseInformationService->getForeignKeys($table);
         $uniqueColumns = $this->getUniqueColumns($table);
 
+        $columns = $this->databaseInformationService->getColumns($table);
+        $nullableColumns = array_map(
+            fn (array $col) => $col['name'],
+            array_filter($columns, fn (array $col) => $col['nullable']),
+        );
+
         foreach ($foreignKeys as $foreignKey) {
             $foreignTable = $foreignKey['foreign_table'];
 
@@ -107,11 +122,21 @@ class MermaidErdGenerator
                 continue;
             }
 
-            $columnName = $foreignKey['columns'][0];
-            $isOneToOne = in_array($columnName, $uniqueColumns);
-            $cardinality = $isOneToOne ? '||--||' : '||--o{';
-            $label = $isOneToOne ? 'has one' : 'has many';
-            $label .= " via {$columnName}";
+            $columnLabel = implode(', ', $foreignKey['columns']);
+            $isOneToOne = count($foreignKey['columns']) === 1 && in_array($foreignKey['columns'][0], $uniqueColumns);
+            $isNullable = array_intersect($foreignKey['columns'], $nullableColumns) !== [];
+            $isSelfRef = $foreignTable === $table;
+
+            $parentSide = $isNullable ? '|o' : '||';
+            $childSide = $isOneToOne ? '||' : 'o{';
+            $cardinality = "{$parentSide}--{$childSide}";
+
+            if ($isSelfRef) {
+                $label = 'self-ref';
+            } else {
+                $label = $isOneToOne ? 'has one' : 'has many';
+            }
+            $label .= " via {$columnLabel}";
 
             $onDelete = $foreignKey['on_delete'] ?? '';
             if ($onDelete !== '' && !in_array(strtolower($onDelete), ['no action', 'restrict'])) {

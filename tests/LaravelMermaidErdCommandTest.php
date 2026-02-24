@@ -14,19 +14,20 @@ function assertDiagramStructure(string $output): void
 {
     expect($output)
         ->toContain('erDiagram')
-        ->toContain('comments {')
-        ->toContain('posts {')
-        ->toContain('tags {')
-        ->toContain('users {')
-        ->not->toContain('post_tag {')
+        ->toMatch('/categories\[.*?\] \{/')
+        ->toMatch('/comments\[.*?\] \{/')
+        ->toMatch('/posts\[.*?\] \{/')
+        ->toMatch('/tags\[.*?\] \{/')
+        ->toMatch('/users\[.*?\] \{/')
+        ->not->toMatch('/post_tag\[.*?\] \{/')
         // PK/FK/UK markers
-        ->toMatch('/users \{[^}]*integer id PK/s')
-        ->toMatch('/users \{[^}]*varchar email UK/s')
-        ->toMatch('/posts \{[^}]*integer id PK/s')
-        ->toMatch('/posts \{[^}]*integer user_id FK/s')
-        ->toMatch('/tags \{[^}]*varchar slug UK/s')
-        ->toMatch('/comments \{[^}]*integer post_id FK/s')
-        ->toMatch('/comments \{[^}]*integer user_id FK/s')
+        ->toMatch('/users\[.*?\] \{[^}]*integer id PK/s')
+        ->toMatch('/users\[.*?\] \{[^}]*varchar email UK/s')
+        ->toMatch('/posts\[.*?\] \{[^}]*integer id PK/s')
+        ->toMatch('/posts\[.*?\] \{[^}]*integer user_id FK/s')
+        ->toMatch('/tags\[.*?\] \{[^}]*varchar slug UK/s')
+        ->toMatch('/comments\[.*?\] \{[^}]*integer post_id FK/s')
+        ->toMatch('/comments\[.*?\] \{[^}]*integer user_id FK/s')
         // Relationships with cascade info
         ->toContain('posts }o--o{ tags : "post_tag"')
         ->toContain('comments : "has many via user_id, cascade delete"')
@@ -120,7 +121,7 @@ it('detects soft-delete columns and annotates them', function () {
     $output = Artisan::output();
 
     expect($output)
-        ->toMatch('/videos \{[^}]*datetime deleted_at "soft-delete, nullable"/s');
+        ->toMatch('/videos\[.*?\] \{[^}]*datetime deleted_at "soft-delete, nullable"/s');
 });
 
 it('detects polymorphic column pairs and annotates them', function () {
@@ -128,8 +129,8 @@ it('detects polymorphic column pairs and annotates them', function () {
     $output = Artisan::output();
 
     expect($output)
-        ->toMatch('/reviews \{[^}]*varchar reviewable_type "polymorphic"/s')
-        ->toMatch('/reviews \{[^}]*integer reviewable_id "polymorphic"/s');
+        ->toMatch('/reviews\[.*?\] \{[^}]*varchar reviewable_type "polymorphic"/s')
+        ->toMatch('/reviews\[.*?\] \{[^}]*integer reviewable_id "polymorphic"/s');
 });
 
 it('renders polymorphic relationships from config', function () {
@@ -151,9 +152,42 @@ it('supports the --tables option', function () {
     $output = Artisan::output();
 
     expect($output)
-        ->toContain('users {')
-        ->toContain('posts {')
-        ->not->toContain('comments {')
-        ->not->toContain('tags {')
-        ->not->toContain('post_tag {');
+        ->toMatch('/users\[.*?\] \{/')
+        ->toMatch('/posts\[.*?\] \{/')
+        ->not->toMatch('/comments\[.*?\] \{/')
+        ->not->toMatch('/tags\[.*?\] \{/')
+        ->not->toMatch('/post_tag\[.*?\] \{/');
+});
+
+it('uses nullable parent-side cardinality for nullable foreign keys', function () {
+    Artisan::call('generate:mermaid-erd', ['--output' => 'stdout']);
+    $output = Artisan::output();
+
+    expect($output)
+        ->toContain('categories |o--o{ categories');
+});
+
+it('renders self-referential relationships with self-ref label', function () {
+    Artisan::call('generate:mermaid-erd', ['--output' => 'stdout']);
+    $output = Artisan::output();
+
+    expect($output)
+        ->toContain('self-ref via parent_id');
+});
+
+it('includes overall table and column stats in title', function () {
+    Artisan::call('generate:mermaid-erd', ['--output' => 'stdout']);
+    $output = Artisan::output();
+
+    expect($output)
+        ->toMatch('/^---\ntitle: \d+ tables · \d+ columns\n---\n/');
+});
+
+it('includes per-table column count in table header', function () {
+    Artisan::call('generate:mermaid-erd', ['--output' => 'stdout']);
+    $output = Artisan::output();
+
+    expect($output)
+        ->toContain('users["users (5)"]')
+        ->toContain('posts["posts (6)"]');
 });
