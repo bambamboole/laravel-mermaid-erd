@@ -2,6 +2,14 @@
 
 All notable changes to `laravel-mermaid-erd` will be documented in this file.
 
+## 0.3.4 - 2026-04-08
+
+### What's Changed
+
+* Bump ramsey/composer-install from 3 to 4 by @dependabot[bot] in https://github.com/bambamboole/laravel-mermaid-erd/pull/11
+
+**Full Changelog**: https://github.com/bambamboole/laravel-mermaid-erd/compare/0.3.3...0.3.4
+
 ## 0.3.3 - 2026-02-24
 
 **Full Changelog**: https://github.com/bambamboole/laravel-mermaid-erd/compare/0.3.2...0.3.3
