@@ -10,11 +10,12 @@ class DatabaseInformationService
         private readonly Connection $db,
         private readonly array $ignoreTables = [],
         private readonly array $onlyTables = [],
+        private readonly ?string $schema = null,
     ) {}
 
     public function getTables(): array
     {
-        $tables = $this->db->getSchemaBuilder()->getTables();
+        $tables = $this->db->getSchemaBuilder()->getTables($this->getSchemaName());
         $tableNames = array_map(fn (array $table) => $table['name'], $tables);
 
         if ($this->onlyTables !== []) {
@@ -37,5 +38,18 @@ class DatabaseInformationService
     public function getIndexes(string $table): array
     {
         return $this->db->getSchemaBuilder()->getIndexes($table);
+    }
+
+    private function getSchemaName(): ?string
+    {
+        if ($this->schema !== null) {
+            return $this->schema;
+        }
+
+        if ($this->db->getDriverName() === 'mysql') {
+            return $this->db->getDatabaseName();
+        }
+
+        return null;
     }
 }
