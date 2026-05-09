@@ -80,6 +80,8 @@ The config file allows you to ignore specific tables:
 
 ```php
 return [
+    'schema' => null,
+
     'ignore_tables' => [
         'migrations',
         'failed_jobs',
@@ -88,6 +90,10 @@ return [
     ],
 ];
 ```
+
+By default, MySQL connections are scoped to the active database name so tables
+from other visible databases are not included in the diagram. Set `schema` if you
+want to inspect a specific schema/database explicitly.
 
 ### Smart relationship detection
 

@@ -34,6 +34,7 @@ class LaravelMermaidErdCommand extends Command
             $connection,
             config('mermaid-erd.ignore_tables', []),
             $onlyTables,
+            config('mermaid-erd.schema'),
         );
 
         $generator = new MermaidErdGenerator(

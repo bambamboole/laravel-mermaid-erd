@@ -13,6 +13,8 @@ return [
         'cache_locks',
     ],
 
+    'schema' => null,
+
     'guess_relationships' => true,
 
     'polymorphic_relationships' => [
