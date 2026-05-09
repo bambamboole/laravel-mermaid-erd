@@ -2,6 +2,19 @@
 
 All notable changes to `laravel-mermaid-erd` will be documented in this file.
 
+## 0.3.5 - 2026-05-09
+
+### What's Changed
+
+* Fix MySQL schema scoping for table discovery by @Keyliananda in https://github.com/bambamboole/laravel-mermaid-erd/pull/15
+* Bump dependabot/fetch-metadata from 2.5.0 to 3.1.0 by @dependabot[bot] in https://github.com/bambamboole/laravel-mermaid-erd/pull/14
+
+### New Contributors
+
+* @Keyliananda made their first contribution in https://github.com/bambamboole/laravel-mermaid-erd/pull/15
+
+**Full Changelog**: https://github.com/bambamboole/laravel-mermaid-erd/compare/0.3.4...0.3.5
+
 ## 0.3.4 - 2026-04-08
 
 ### What's Changed
