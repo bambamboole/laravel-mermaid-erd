@@ -4,7 +4,8 @@ namespace Bambamboole\LaravelMermaidErd\Commands;
 
 use Bambamboole\LaravelMermaidErd\DatabaseInformationService;
 use Bambamboole\LaravelMermaidErd\FileWriter;
-use Bambamboole\LaravelMermaidErd\MermaidErdGenerator;
+use Bambamboole\LaravelMermaidErd\MermaidErdRenderer;
+use Bambamboole\LaravelMermaidErd\Schema\SchemaBuilder;
 use Illuminate\Console\Command;
 use Illuminate\Filesystem\Filesystem;
 
@@ -37,12 +38,12 @@ class LaravelMermaidErdCommand extends Command
             config('mermaid-erd.schema'),
         );
 
-        $generator = new MermaidErdGenerator(
+        $builder = new SchemaBuilder(
             $service,
             config('mermaid-erd.polymorphic_relationships', []),
             config('mermaid-erd.guess_relationships', true),
         );
-        $diagram = $generator->generate();
+        $diagram = (new MermaidErdRenderer)->render($builder->build());
 
         $output = $this->option('output') ?? select(
             label: 'How would you like to output the diagram?',
