@@ -13,6 +13,7 @@ it('uses the diagram blade view', function (): void {
     $response->assertViewIs('mermaid-erd::diagram');
     $response->assertViewHas('connectionName');
     $response->assertViewHas('diagram');
+    $response->assertViewHas('graph');
     $response->assertViewHas('mermaidConfig');
 });
 
@@ -22,8 +23,17 @@ it('contains required html structure', function (): void {
     $response->assertOk();
     $response->assertSee('<!DOCTYPE html>', false);
     $response->assertSee('mermaid.min.js', false);
-    $response->assertSee('<pre class="mermaid', false);
+    $response->assertSee('id="diagram-wrapper"', false);
     $response->assertSee('tailwindcss', false);
+});
+
+it('contains the filter search box and graph payload', function (): void {
+    $response = $this->get('/mermaid-erd');
+
+    $response->assertOk();
+    $response->assertSee('id="erd-search"', false);
+    $response->assertSee('const graph =', false);
+    $response->assertSee('"edges":', false);
 });
 
 it('contains diagram with table names', function (): void {
@@ -62,7 +72,7 @@ it('does not cache when cache is disabled', function (): void {
     $this->get('/mermaid-erd')->assertOk();
 
     $connectionName = config('database.default');
-    expect(Cache::has("mermaid-erd:diagram:{$connectionName}"))->toBeFalse();
+    expect(Cache::has("mermaid-erd:view:{$connectionName}"))->toBeFalse();
 });
 
 it('caches diagram when cache is enabled', function (): void {
@@ -72,7 +82,7 @@ it('caches diagram when cache is enabled', function (): void {
     $this->get('/mermaid-erd')->assertOk();
 
     $connectionName = config('database.default');
-    expect(Cache::has("mermaid-erd:diagram:{$connectionName}"))->toBeTrue();
+    expect(Cache::has("mermaid-erd:view:{$connectionName}"))->toBeTrue();
 });
 
 it('has named route mermaid-erd', function (): void {

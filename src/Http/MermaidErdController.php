@@ -14,24 +14,34 @@ class MermaidErdController
     public function __invoke(SchemaBuilder $builder): ViewContract
     {
         $connectionName = config('database.default');
-        $cacheKey = "mermaid-erd:diagram:{$connectionName}";
+        $cacheKey = "mermaid-erd:view:{$connectionName}";
 
-        $generate = fn (): string => (new MermaidErdRenderer)->render($builder->build());
+        $generate = function () use ($builder): array {
+            $schema = $builder->build();
+
+            return [
+                'diagram' => (new MermaidErdRenderer)->render($schema),
+                'graph' => $schema->toGraph(),
+            ];
+        };
 
         if (config('mermaid-erd.web.cache.enabled')) {
-            $diagram = Cache::remember(
+            $data = Cache::remember(
                 $cacheKey,
                 config('mermaid-erd.web.cache.ttl', 3600),
                 $generate,
             );
         } else {
-            $diagram = $generate();
+            $data = $generate();
         }
+
+        $jsonFlags = JSON_THROW_ON_ERROR | JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT;
 
         return View::make('mermaid-erd::diagram', [
             'connectionName' => $connectionName,
-            'diagram' => htmlspecialchars($diagram, ENT_QUOTES, 'UTF-8'),
-            'mermaidConfig' => json_encode(config('mermaid-erd.web.mermaid', []), JSON_THROW_ON_ERROR),
+            'diagram' => json_encode($data['diagram'], $jsonFlags),
+            'graph' => json_encode($data['graph'], $jsonFlags),
+            'mermaidConfig' => json_encode(config('mermaid-erd.web.mermaid', []), $jsonFlags),
         ]);
     }
 }
