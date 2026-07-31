@@ -53,9 +53,6 @@
     },
     "scripts": {
         "post-autoload-dump": "@composer run prepare",
-        "post-install-cmd": "@hooks:install",
-        "post-update-cmd": "@hooks:install",
-        "hooks:install": "git config core.hooksPath .githooks 2>/dev/null || true",
         "clear": "@php vendor/bin/testbench package:purge-laravel-mermaid-erd --ansi",
         "prepare": "@php vendor/bin/testbench package:discover --ansi",
         "build": [

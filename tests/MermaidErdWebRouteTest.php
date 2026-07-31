@@ -2,11 +2,11 @@
 
 use Illuminate\Support\Facades\Cache;
 
-it('returns 200', function () {
+it('returns 200', function (): void {
     $this->get('/mermaid-erd')->assertOk();
 });
 
-it('uses the diagram blade view', function () {
+it('uses the diagram blade view', function (): void {
     $response = $this->get('/mermaid-erd');
 
     $response->assertOk();
@@ -16,7 +16,7 @@ it('uses the diagram blade view', function () {
     $response->assertViewHas('mermaidConfig');
 });
 
-it('contains required html structure', function () {
+it('contains required html structure', function (): void {
     $response = $this->get('/mermaid-erd');
 
     $response->assertOk();
@@ -26,7 +26,7 @@ it('contains required html structure', function () {
     $response->assertSee('tailwindcss', false);
 });
 
-it('contains diagram with table names', function () {
+it('contains diagram with table names', function (): void {
     $response = $this->get('/mermaid-erd');
 
     $response->assertOk();
@@ -37,7 +37,7 @@ it('contains diagram with table names', function () {
     $response->assertSee('tags', false);
 });
 
-it('contains mermaid config from configuration', function () {
+it('contains mermaid config from configuration', function (): void {
     $response = $this->get('/mermaid-erd');
 
     $response->assertOk();
@@ -46,7 +46,7 @@ it('contains mermaid config from configuration', function () {
     $response->assertSee('"securityLevel":', false);
 });
 
-it('contains zoom controls', function () {
+it('contains zoom controls', function (): void {
     $response = $this->get('/mermaid-erd');
 
     $response->assertOk();
@@ -56,7 +56,7 @@ it('contains zoom controls', function () {
     $response->assertSee('resetView()', false);
 });
 
-it('does not cache when cache is disabled', function () {
+it('does not cache when cache is disabled', function (): void {
     config()->set('mermaid-erd.web.cache.enabled', false);
 
     $this->get('/mermaid-erd')->assertOk();
@@ -65,7 +65,7 @@ it('does not cache when cache is disabled', function () {
     expect(Cache::has("mermaid-erd:diagram:{$connectionName}"))->toBeFalse();
 });
 
-it('caches diagram when cache is enabled', function () {
+it('caches diagram when cache is enabled', function (): void {
     config()->set('mermaid-erd.web.cache.enabled', true);
     config()->set('mermaid-erd.web.cache.ttl', 3600);
 
@@ -75,11 +75,11 @@ it('caches diagram when cache is enabled', function () {
     expect(Cache::has("mermaid-erd:diagram:{$connectionName}"))->toBeTrue();
 });
 
-it('has named route mermaid-erd', function () {
+it('has named route mermaid-erd', function (): void {
     expect(route('mermaid-erd'))->toEndWith('/mermaid-erd');
 });
 
-it('contains copy and download buttons', function () {
+it('contains copy and download buttons', function (): void {
     $response = $this->get('/mermaid-erd');
 
     $response->assertOk();

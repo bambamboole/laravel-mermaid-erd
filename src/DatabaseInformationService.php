@@ -16,13 +16,13 @@ class DatabaseInformationService
     public function getTables(): array
     {
         $tables = $this->db->getSchemaBuilder()->getTables($this->getSchemaName());
-        $tableNames = array_map(fn (array $table) => $table['name'], $tables);
+        $tableNames = array_map(fn (array $table): string => $table['name'], $tables);
 
         if ($this->onlyTables !== []) {
-            return array_values(array_filter($tableNames, fn ($tableName) => in_array($tableName, $this->onlyTables)));
+            return array_values(array_filter($tableNames, fn (string $tableName): bool => in_array($tableName, $this->onlyTables)));
         }
 
-        return array_values(array_filter($tableNames, fn ($tableName) => !in_array($tableName, $this->ignoreTables)));
+        return array_values(array_filter($tableNames, fn (string $tableName): bool => !in_array($tableName, $this->ignoreTables)));
     }
 
     public function getForeignKeys(string $table): array

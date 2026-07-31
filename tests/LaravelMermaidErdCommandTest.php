@@ -36,13 +36,13 @@ function assertDiagramStructure(string $output): void
         ->toContain('posts : "has many via user_id, cascade delete"');
 }
 
-it('outputs diagram to stdout', function () {
+it('outputs diagram to stdout', function (): void {
     Artisan::call('generate:mermaid-erd', ['--output' => 'stdout']);
 
     assertDiagramStructure(Artisan::output());
 });
 
-it('writes diagram to a new file with tags', function () {
+it('writes diagram to a new file with tags', function (): void {
     $path = tempnam(sys_get_temp_dir(), 'mermaid_test_');
     unlink($path);
 
@@ -60,7 +60,7 @@ it('writes diagram to a new file with tags', function () {
     unlink($path);
 });
 
-it('injects diagram into file between existing tags', function () {
+it('injects diagram into file between existing tags', function (): void {
     $path = copyFixtureToTemp('readme-with-tags.md');
 
     $this->artisan('generate:mermaid-erd', ['--output' => 'file', '--path' => $path])
@@ -78,7 +78,7 @@ it('injects diagram into file between existing tags', function () {
     unlink($path);
 });
 
-it('replaces existing diagram content between tags', function () {
+it('replaces existing diagram content between tags', function (): void {
     $path = copyFixtureToTemp('readme-with-old-content.md');
 
     $this->artisan('generate:mermaid-erd', ['--output' => 'file', '--path' => $path])
@@ -93,7 +93,7 @@ it('replaces existing diagram content between tags', function () {
     unlink($path);
 });
 
-it('appends diagram with heading when tags are missing', function () {
+it('appends diagram with heading when tags are missing', function (): void {
     $path = copyFixtureToTemp('readme-without-tags.md');
 
     $this->artisan('generate:mermaid-erd', ['--output' => 'file', '--path' => $path])
@@ -111,13 +111,13 @@ it('appends diagram with heading when tags are missing', function () {
     unlink($path);
 });
 
-it('supports the --connection option', function () {
+it('supports the --connection option', function (): void {
     Artisan::call('generate:mermaid-erd', ['--output' => 'stdout', '--connection' => config('database.default')]);
 
     expect(Artisan::output())->toContain('erDiagram');
 });
 
-it('detects soft-delete columns and annotates them', function () {
+it('detects soft-delete columns and annotates them', function (): void {
     Artisan::call('generate:mermaid-erd', ['--output' => 'stdout']);
     $output = Artisan::output();
 
@@ -125,7 +125,7 @@ it('detects soft-delete columns and annotates them', function () {
         ->toMatch('/videos\[.*?\] \{[^}]*\w+ deleted_at "soft-delete, nullable"/s');
 });
 
-it('detects polymorphic column pairs and annotates them', function () {
+it('detects polymorphic column pairs and annotates them', function (): void {
     Artisan::call('generate:mermaid-erd', ['--output' => 'stdout']);
     $output = Artisan::output();
 
@@ -134,7 +134,7 @@ it('detects polymorphic column pairs and annotates them', function () {
         ->toMatch('/reviews\[.*?\] \{[^}]*\w+ reviewable_id "polymorphic"/s');
 });
 
-it('renders polymorphic relationships from config', function () {
+it('renders polymorphic relationships from config', function (): void {
     config()->set('mermaid-erd.polymorphic_relationships', [
         'reviews.reviewable' => ['posts', 'videos'],
     ]);
@@ -147,7 +147,7 @@ it('renders polymorphic relationships from config', function () {
         ->toContain('videos ||--o{ reviews : "morphMany via reviewable"');
 });
 
-it('supports the --tables option', function () {
+it('supports the --tables option', function (): void {
     Artisan::call('generate:mermaid-erd', ['--output' => 'stdout', '--tables' => 'users,posts']);
 
     $output = Artisan::output();
@@ -160,7 +160,7 @@ it('supports the --tables option', function () {
         ->not->toMatch('/post_tag\[.*?\] \{/');
 });
 
-it('renders pivot tables as full entities with FK columns', function () {
+it('renders pivot tables as full entities with FK columns', function (): void {
     Artisan::call('generate:mermaid-erd', ['--output' => 'stdout']);
     $output = Artisan::output();
 
@@ -169,7 +169,7 @@ it('renders pivot tables as full entities with FK columns', function () {
         ->toMatch('/post_tag\[.*?\] \{[^}]*\w+ tag_id FK/s');
 });
 
-it('uses nullable parent-side cardinality for nullable foreign keys', function () {
+it('uses nullable parent-side cardinality for nullable foreign keys', function (): void {
     Artisan::call('generate:mermaid-erd', ['--output' => 'stdout']);
     $output = Artisan::output();
 
@@ -177,7 +177,7 @@ it('uses nullable parent-side cardinality for nullable foreign keys', function (
         ->toContain('categories |o--o{ categories');
 });
 
-it('renders self-referential relationships with self-ref label', function () {
+it('renders self-referential relationships with self-ref label', function (): void {
     Artisan::call('generate:mermaid-erd', ['--output' => 'stdout']);
     $output = Artisan::output();
 
@@ -185,7 +185,7 @@ it('renders self-referential relationships with self-ref label', function () {
         ->toContain('self-ref via parent_id');
 });
 
-it('includes overall table and column stats in title', function () {
+it('includes overall table and column stats in title', function (): void {
     Artisan::call('generate:mermaid-erd', ['--output' => 'stdout']);
     $output = Artisan::output();
 
@@ -193,7 +193,7 @@ it('includes overall table and column stats in title', function () {
         ->toMatch('/^---\ntitle: \d+ tables · \d+ columns\n---\n/');
 });
 
-it('includes per-table column count in table header', function () {
+it('includes per-table column count in table header', function (): void {
     Artisan::call('generate:mermaid-erd', ['--output' => 'stdout']);
     $output = Artisan::output();
 
@@ -202,7 +202,7 @@ it('includes per-table column count in table header', function () {
         ->toContain('posts["posts (6)"]');
 });
 
-it('guesses relationships for _id columns without FK constraints', function () {
+it('guesses relationships for _id columns without FK constraints', function (): void {
     Artisan::call('generate:mermaid-erd', ['--output' => 'stdout']);
     $output = Artisan::output();
 
@@ -210,7 +210,7 @@ it('guesses relationships for _id columns without FK constraints', function () {
         ->toContain('users ||--o{ ai_messages : "guessed has many via user_id"');
 });
 
-it('does not guess relationships when config is disabled', function () {
+it('does not guess relationships when config is disabled', function (): void {
     config()->set('mermaid-erd.guess_relationships', false);
 
     Artisan::call('generate:mermaid-erd', ['--output' => 'stdout']);
@@ -220,7 +220,7 @@ it('does not guess relationships when config is disabled', function () {
         ->not->toContain('guessed has many');
 });
 
-it('shows unmapped polymorphic relations as comments', function () {
+it('shows unmapped polymorphic relations as comments', function (): void {
     Artisan::call('generate:mermaid-erd', ['--output' => 'stdout']);
     $output = Artisan::output();
 
@@ -229,7 +229,7 @@ it('shows unmapped polymorphic relations as comments', function () {
         ->toContain('%%   reviews.reviewable (reviewable_type + reviewable_id)');
 });
 
-it('does not show mapped polymorphic relations in unmapped comments', function () {
+it('does not show mapped polymorphic relations in unmapped comments', function (): void {
     config()->set('mermaid-erd.polymorphic_relationships', [
         'reviews.reviewable' => ['posts', 'videos'],
     ]);

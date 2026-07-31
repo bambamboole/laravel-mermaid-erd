@@ -116,9 +116,7 @@ class MermaidErdGenerator
             $diagram .= $line."\n";
         }
 
-        $diagram .= "    }\n";
-
-        return $diagram;
+        return $diagram."    }\n";
     }
 
     protected function generateRelationships(string $table, array $activeTables, array $pivotTableNames = []): string
