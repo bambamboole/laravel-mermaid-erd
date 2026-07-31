@@ -4,8 +4,12 @@ namespace Bambamboole\LaravelMermaidErd\Schema;
 
 use Illuminate\Database\Eloquent\Casts\Attribute;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Database\Eloquent\Relations\HasOne;
 use Illuminate\Database\Eloquent\Relations\MorphMany;
 use Illuminate\Database\Eloquent\Relations\MorphOne;
+use Illuminate\Database\Eloquent\Relations\MorphTo;
 use Illuminate\Database\Eloquent\Relations\MorphToMany;
 use Illuminate\Support\Str;
 use Spatie\StructureDiscoverer\Discover;
@@ -26,27 +30,30 @@ class ModelScanner
     {
         $models = [];
         $morphs = [];
+        $relations = [];
 
         foreach ($this->discoverModelClasses() as $class) {
             try {
-                $this->inspect($class, $models, $morphs);
+                $this->inspect($class, $models, $morphs, $relations);
             } catch (\Throwable) {
                 // A broken model must never kill diagram generation.
             }
         }
 
-        return new ModelScan($models, array_map(
-            fn (array $targets): array => array_values(array_unique($targets)),
-            $morphs,
-        ));
+        return new ModelScan(
+            $models,
+            array_map(fn (array $targets): array => array_values(array_unique($targets)), $morphs),
+            array_values($relations),
+        );
     }
 
     /**
      * @param  class-string  $class
      * @param  array<string, ModelMetadata>  $models
      * @param  array<string, string[]>  $morphs
+     * @param  array<string, ScannedRelation>  $relations
      */
-    private function inspect(string $class, array &$models, array &$morphs): void
+    private function inspect(string $class, array &$models, array &$morphs, array &$relations): void
     {
         $reflection = new \ReflectionClass($class);
         if (!$reflection->isSubclassOf(Model::class) || !$reflection->isInstantiable()) {
@@ -127,6 +134,46 @@ class ModelScanner
                 }
 
                 $morphs["{$childTable}.{$morphName}"][] = $target;
+
+                continue;
+            }
+
+            // MorphTo extends BelongsTo but has no static target — excluded.
+            if (is_a($typeName, MorphTo::class, true)) {
+                continue;
+            }
+
+            if (is_a($typeName, HasMany::class, true)
+                || is_a($typeName, HasOne::class, true)
+                || is_a($typeName, BelongsTo::class, true)) {
+                try {
+                    $relation = $method->invoke($model);
+                } catch (\Throwable) {
+                    continue;
+                }
+
+                if ($relation instanceof BelongsTo) {
+                    $from = $relation->getRelated()->getTable();
+                    $to = $table;
+                    $declaredAs = 'belongsTo';
+                } else {
+                    $from = $table;
+                    $to = $relation->getRelated()->getTable();
+                    $declaredAs = $relation instanceof HasOne ? 'hasOne' : 'hasMany';
+                }
+
+                $key = "{$from}|{$to}|{$relation->getForeignKeyName()}";
+                $existing = $relations[$key] ?? null;
+
+                // Both sides may declare the same relation; the has-side label wins.
+                if ($existing === null || ($existing->declaredAs === 'belongsTo' && $declaredAs !== 'belongsTo')) {
+                    $relations[$key] = new ScannedRelation(
+                        from: $from,
+                        to: $to,
+                        column: $relation->getForeignKeyName(),
+                        declaredAs: $declaredAs,
+                    );
+                }
             }
         }
 

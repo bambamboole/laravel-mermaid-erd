@@ -8,7 +8,7 @@ use Illuminate\Support\Str;
 /**
  * @phpstan-import-type ForeignKeyRow from DatabaseInformationService
  *
- * @phpstan-type TableMeta array{foreignKeys: list<ForeignKeyRow>, uniqueColumns: string[], nullableColumns: string[], foreignKeyColumns: string[], polymorphicColumns: string[]}
+ * @phpstan-type TableMeta array{columnNames: string[], foreignKeys: list<ForeignKeyRow>, uniqueColumns: string[], nullableColumns: string[], foreignKeyColumns: string[], polymorphicColumns: string[]}
  */
 class SchemaBuilder
 {
@@ -93,6 +93,7 @@ class SchemaBuilder
             );
 
             $meta[$tableName] = [
+                'columnNames' => $columnNames,
                 'foreignKeys' => $foreignKeys,
                 'uniqueColumns' => $uniqueColumns,
                 'nullableColumns' => $nullableColumns,
@@ -114,6 +115,11 @@ class SchemaBuilder
     {
         $relations = [];
 
+        $scannedByChild = [];
+        foreach ($this->models->relations ?? [] as $scanned) {
+            $scannedByChild[$scanned->to][] = $scanned;
+        }
+
         foreach ($tableNames as $tableName) {
             foreach ($meta[$tableName]['foreignKeys'] as $foreignKey) {
                 $foreignTable = $foreignKey['foreign_table'];
@@ -134,8 +140,31 @@ class SchemaBuilder
                 );
             }
 
+            $modelCoveredColumns = [];
+            foreach ($scannedByChild[$tableName] ?? [] as $scanned) {
+                // A foreign key constraint is authoritative; the model relation
+                // only fills in where the schema has none.
+                if (!in_array($scanned->from, $tableNames)
+                    || !in_array($scanned->column, $meta[$tableName]['columnNames'])
+                    || in_array($scanned->column, $meta[$tableName]['foreignKeyColumns'])) {
+                    continue;
+                }
+
+                $modelCoveredColumns[] = $scanned->column;
+                $relations[] = new Relation(
+                    from: $scanned->from,
+                    to: $tableName,
+                    type: RelationType::Eloquent,
+                    columns: [$scanned->column],
+                    nullable: in_array($scanned->column, $meta[$tableName]['nullableColumns']),
+                    oneToOne: $scanned->declaredAs === 'hasOne'
+                        || in_array($scanned->column, $meta[$tableName]['uniqueColumns']),
+                    declaredAs: $scanned->declaredAs,
+                );
+            }
+
             if ($this->guessRelationships) {
-                array_push($relations, ...$this->guessRelations($tableName, $tableNames, $tables, $meta));
+                array_push($relations, ...$this->guessRelations($tableName, $tableNames, $tables, $meta, $modelCoveredColumns));
             }
         }
 
@@ -178,9 +207,10 @@ class SchemaBuilder
      * @param  string[]  $tableNames
      * @param  array<string, Table>  $tables
      * @param  array<string, TableMeta>  $meta
+     * @param  string[]  $modelCoveredColumns
      * @return list<Relation>
      */
-    private function guessRelations(string $tableName, array $tableNames, array $tables, array $meta): array
+    private function guessRelations(string $tableName, array $tableNames, array $tables, array $meta, array $modelCoveredColumns = []): array
     {
         $relations = [];
 
@@ -189,7 +219,8 @@ class SchemaBuilder
                 continue;
             }
 
-            if (in_array($column->name, $meta[$tableName]['foreignKeyColumns'])) {
+            if (in_array($column->name, $meta[$tableName]['foreignKeyColumns'])
+                || in_array($column->name, $modelCoveredColumns)) {
                 continue;
             }
 

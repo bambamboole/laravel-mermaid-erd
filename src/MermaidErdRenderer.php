@@ -107,6 +107,15 @@ class MermaidErdRenderer
 
         return match ($relation->type) {
             RelationType::ForeignKey => $this->renderForeignKeyRelation($relation, $schema, $parentSide),
+            RelationType::Eloquent => sprintf(
+                "    %s %s--%s %s : \"%s via %s\"\n",
+                $relation->from,
+                $parentSide,
+                $relation->oneToOne ? '||' : 'o{',
+                $relation->to,
+                $relation->declaredAs,
+                $relation->columns[0],
+            ),
             RelationType::Guessed => "    {$relation->from} {$parentSide}--o{ {$relation->to} : \"guessed has many via {$relation->columns[0]}\"\n",
             RelationType::Morph => "    {$relation->from} ||--o{ {$relation->to} : \"morphMany via {$relation->morphName}\"\n",
         };

@@ -17,7 +17,7 @@ Generated from this package's own test schema:
 title: 9 tables · 52 columns
 ---
 erDiagram
-    ai_messages["ai_messages (6)"] {
+    ai_messages["ai_messages (6) · AiMessage"] {
         integer id PK
         integer user_id
         text prompt
@@ -87,7 +87,7 @@ erDiagram
         datetime created_at "nullable"
         datetime updated_at "nullable"
     }
-    users ||--o{ ai_messages : "guessed has many via user_id"
+    users ||--o{ ai_messages : "hasMany via user_id"
     categories |o--o{ categories : "self-ref via parent_id, set null delete"
     users ||--o{ comments : "has many via user_id, cascade delete"
     posts ||--o{ comments : "has many via post_id, cascade delete"
@@ -206,13 +206,14 @@ When enabled (the default), the package scans your Eloquent models and enriches 
 - the owning model class in each table header (`orders (9) · Order`)
 - casts, accessors and mutators as column annotations (`varchar status "cast: OrderStatus"`)
 - polymorphic relations, auto-discovered from `morphOne` / `morphMany` / `morphToMany` methods — no manual `polymorphic_relationships` config needed for them
+- `hasMany` / `hasOne` / `belongsTo` relations for columns without a foreign key constraint — rendered with the declaring method (`hasMany via user_id`) and replacing the name-based guess. Precedence: foreign key constraint > model relation > guess.
 
 Only relation methods with an **explicit return type** are invoked (and each call is failure-isolated), so the scan never executes arbitrary model code. Configure it via:
 
 ```php
 'models' => [
     'enabled' => true,
-    'paths' => null, // null defaults to [app_path('Models')]
+    'paths' => null, // null defaults to [app_path()]
 ],
 ```
 

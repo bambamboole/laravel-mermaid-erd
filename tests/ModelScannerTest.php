@@ -57,6 +57,48 @@ it('discovers morph relations from typed relation methods', function (): void {
         ->and($morphs['attachments.attachable'])->toBe(['posts', 'videos']);
 });
 
+it('discovers non-morph relations and prefers the has-side declaration', function (): void {
+    $relations = collect(scanWorkbenchModels()->relations);
+
+    $aiMessages = $relations->first(fn ($relation): bool => $relation->to === 'ai_messages');
+
+    // Declared as belongsTo on AiMessage AND hasMany on User — has-side wins.
+    expect($aiMessages)->not->toBeNull()
+        ->and($aiMessages->from)->toBe('users')
+        ->and($aiMessages->column)->toBe('user_id')
+        ->and($aiMessages->declaredAs)->toBe('hasMany');
+});
+
+it('builds eloquent relations only where no foreign key exists', function (): void {
+    $schema = buildEnrichedSchema();
+
+    $aiMessages = collect($schema->relations)->first(fn ($relation): bool => $relation->to === 'ai_messages');
+
+    // ai_messages.user_id has no FK constraint: the model relation replaces the guess.
+    expect($aiMessages->type)->toBe(RelationType::Eloquent)
+        ->and($aiMessages->declaredAs)->toBe('hasMany')
+        ->and(collect($schema->relations)->contains(
+            fn ($relation): bool => $relation->to === 'ai_messages' && $relation->type === RelationType::Guessed,
+        ))->toBeFalse();
+
+    // posts.user_id has an FK constraint: Post::user() must not add a second edge.
+    $postUserEdges = collect($schema->relations)->filter(
+        fn ($relation): bool => $relation->to === 'posts' && $relation->columns === ['user_id'],
+    );
+    expect($postUserEdges)->toHaveCount(1)
+        ->and($postUserEdges->first()->type)->toBe(RelationType::ForeignKey);
+});
+
+it('renders eloquent relations with their declaring method', function (): void {
+    $diagram = (new MermaidErdRenderer)->render(buildEnrichedSchema());
+
+    expect($diagram)
+        ->toContain('users ||--o{ ai_messages : "hasMany via user_id"')
+        ->not->toContain('ai_messages : "guessed')
+        // audit_logs has no model — the heuristic guess remains.
+        ->toContain('audit_logs : "guessed has many via user_id"');
+});
+
 it('returns an empty scan for nonexistent paths', function (): void {
     $scan = (new ModelScanner(['/nonexistent/path']))->scan();
 
