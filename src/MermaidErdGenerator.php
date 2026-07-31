@@ -156,8 +156,8 @@ class MermaidErdGenerator
             }
             $label .= " via {$columnLabel}";
 
-            $onDelete = $foreignKey['on_delete'] ?? '';
-            if ($onDelete !== '' && !in_array(strtolower($onDelete), ['no action', 'restrict'])) {
+            $onDelete = strtolower($foreignKey['on_delete'] ?? '');
+            if ($onDelete !== '' && !in_array($onDelete, ['no action', 'restrict'])) {
                 $label .= ", {$onDelete} delete";
             }
 

@@ -20,14 +20,14 @@ function assertDiagramStructure(string $output): void
         ->toMatch('/tags\[.*?\] \{/')
         ->toMatch('/users\[.*?\] \{/')
         ->toMatch('/post_tag\[.*?\] \{/')
-        // PK/FK/UK markers
-        ->toMatch('/users\[.*?\] \{[^}]*integer id PK/s')
-        ->toMatch('/users\[.*?\] \{[^}]*varchar email UK/s')
-        ->toMatch('/posts\[.*?\] \{[^}]*integer id PK/s')
-        ->toMatch('/posts\[.*?\] \{[^}]*integer user_id FK/s')
-        ->toMatch('/tags\[.*?\] \{[^}]*varchar slug UK/s')
-        ->toMatch('/comments\[.*?\] \{[^}]*integer post_id FK/s')
-        ->toMatch('/comments\[.*?\] \{[^}]*integer user_id FK/s')
+        // PK/FK/UK markers (type names differ per driver, e.g. integer vs int8 vs bigint)
+        ->toMatch('/users\[.*?\] \{[^}]*\w+ id PK/s')
+        ->toMatch('/users\[.*?\] \{[^}]*\w+ email UK/s')
+        ->toMatch('/posts\[.*?\] \{[^}]*\w+ id PK/s')
+        ->toMatch('/posts\[.*?\] \{[^}]*\w+ user_id FK/s')
+        ->toMatch('/tags\[.*?\] \{[^}]*\w+ slug UK/s')
+        ->toMatch('/comments\[.*?\] \{[^}]*\w+ post_id FK/s')
+        ->toMatch('/comments\[.*?\] \{[^}]*\w+ user_id FK/s')
         // Relationships with cascade info
         ->toContain('post_tag : "pivot, has many via post_id, cascade delete"')
         ->toContain('post_tag : "pivot, has many via tag_id, cascade delete"')
@@ -122,7 +122,7 @@ it('detects soft-delete columns and annotates them', function () {
     $output = Artisan::output();
 
     expect($output)
-        ->toMatch('/videos\[.*?\] \{[^}]*datetime deleted_at "soft-delete, nullable"/s');
+        ->toMatch('/videos\[.*?\] \{[^}]*\w+ deleted_at "soft-delete, nullable"/s');
 });
 
 it('detects polymorphic column pairs and annotates them', function () {
@@ -130,8 +130,8 @@ it('detects polymorphic column pairs and annotates them', function () {
     $output = Artisan::output();
 
     expect($output)
-        ->toMatch('/reviews\[.*?\] \{[^}]*varchar reviewable_type "polymorphic"/s')
-        ->toMatch('/reviews\[.*?\] \{[^}]*integer reviewable_id "polymorphic"/s');
+        ->toMatch('/reviews\[.*?\] \{[^}]*\w+ reviewable_type "polymorphic"/s')
+        ->toMatch('/reviews\[.*?\] \{[^}]*\w+ reviewable_id "polymorphic"/s');
 });
 
 it('renders polymorphic relationships from config', function () {
@@ -165,8 +165,8 @@ it('renders pivot tables as full entities with FK columns', function () {
     $output = Artisan::output();
 
     expect($output)
-        ->toMatch('/post_tag\[.*?\] \{[^}]*integer post_id FK/s')
-        ->toMatch('/post_tag\[.*?\] \{[^}]*integer tag_id FK/s');
+        ->toMatch('/post_tag\[.*?\] \{[^}]*\w+ post_id FK/s')
+        ->toMatch('/post_tag\[.*?\] \{[^}]*\w+ tag_id FK/s');
 });
 
 it('uses nullable parent-side cardinality for nullable foreign keys', function () {
