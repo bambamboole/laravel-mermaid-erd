@@ -71,8 +71,18 @@
             zoomLabel.textContent = Math.round(scale * 100) + '%';
         }
 
-        function zoomIn()  { scale = Math.min(MAX_ZOOM, scale + ZOOM_STEP); applyTransform(); }
-        function zoomOut() { scale = Math.max(MIN_ZOOM, scale - ZOOM_STEP); applyTransform(); }
+        // Zoom keeping the container point (px, py) fixed on screen.
+        function zoomAt(px, py, newScale) {
+            newScale = Math.min(MAX_ZOOM, Math.max(MIN_ZOOM, newScale));
+            const ratio = newScale / scale;
+            translateX = px - ratio * (px - translateX);
+            translateY = py - ratio * (py - translateY);
+            scale = newScale;
+            applyTransform();
+        }
+
+        function zoomIn()  { zoomAt(container.clientWidth / 2, container.clientHeight / 2, scale + ZOOM_STEP); }
+        function zoomOut() { zoomAt(container.clientWidth / 2, container.clientHeight / 2, scale - ZOOM_STEP); }
         function resetView() { scale = 1; translateX = 0; translateY = 0; applyTransform(); }
 
         container.addEventListener('wheel', function(e) {
@@ -81,8 +91,8 @@
             // small deltas (smooth glide), a mouse wheel notch (~100) matches
             // roughly the old 15% step. deltaMode 1 means line-based deltas.
             const delta = e.deltaMode === 1 ? e.deltaY * 24 : e.deltaY;
-            scale = Math.min(MAX_ZOOM, Math.max(MIN_ZOOM, scale * Math.exp(-delta * 0.002)));
-            applyTransform();
+            const rect = container.getBoundingClientRect();
+            zoomAt(e.clientX - rect.left, e.clientY - rect.top, scale * Math.exp(-delta * 0.002));
         }, { passive: false });
 
         container.addEventListener('mousedown', function(e) {
