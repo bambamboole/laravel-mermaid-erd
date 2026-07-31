@@ -27,6 +27,17 @@ it('contains required html structure', function (): void {
     $response->assertSee('tailwindcss', false);
 });
 
+it('returns plain mermaid source with ?raw=1', function (): void {
+    $response = $this->get('/mermaid-erd?raw=1');
+
+    $response->assertOk();
+    $response->assertHeader('Content-Type', 'text/plain; charset=UTF-8');
+    expect($response->getContent())
+        ->toStartWith("---\ntitle:")
+        ->toContain('erDiagram')
+        ->not->toContain('<html');
+});
+
 it('contains the filter search box and graph payload', function (): void {
     $response = $this->get('/mermaid-erd');
 
