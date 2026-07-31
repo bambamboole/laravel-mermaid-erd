@@ -182,6 +182,35 @@ it('supports the --tables option', function (): void {
         ->not->toMatch('/post_tag\[.*?\] \{/');
 });
 
+it('supports the --exclude-tables option', function (): void {
+    Artisan::call('generate:mermaid-erd', ['--output' => 'stdout', '--exclude-tables' => 'comments,tags']);
+
+    $output = Artisan::output();
+
+    expect($output)
+        ->toMatch('/users\[.*?\] \{/')
+        ->toMatch('/posts\[.*?\] \{/')
+        ->not->toMatch('/comments\[.*?\] \{/')
+        ->not->toMatch('/tags\[.*?\] \{/');
+});
+
+it('writes plain mermaid source when the path ends in .mmd', function (): void {
+    $path = tempnam(sys_get_temp_dir(), 'mermaid_test_').'.mmd';
+
+    $this->artisan('generate:mermaid-erd', ['--output' => 'file', '--path' => $path])
+        ->assertSuccessful();
+
+    $content = file_get_contents($path);
+
+    expect($content)
+        ->toStartWith("---\ntitle:")
+        ->toContain('erDiagram')
+        ->not->toContain('<!-- mermaid-erd-start -->')
+        ->not->toContain('```');
+
+    unlink($path);
+});
+
 it('renders pivot tables as full entities with FK columns', function (): void {
     Artisan::call('generate:mermaid-erd', ['--output' => 'stdout']);
     $output = Artisan::output();
