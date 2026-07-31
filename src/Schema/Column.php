@@ -14,5 +14,8 @@ readonly class Column
         public bool $unique = false,
         public bool $softDelete = false,
         public bool $polymorphic = false,
+        public ?string $cast = null,
+        public bool $accessor = false,
+        public bool $mutator = false,
     ) {}
 }

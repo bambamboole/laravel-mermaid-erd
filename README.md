@@ -17,7 +17,7 @@ Generated from this package's own test schema:
 title: 9 tables · 52 columns
 ---
 erDiagram
-    ai_messages["ai_messages (6)"] {
+    ai_messages["ai_messages (6) · AiMessage"] {
         integer id PK
         integer user_id
         text prompt
@@ -47,7 +47,7 @@ erDiagram
         datetime created_at "nullable"
         datetime updated_at "nullable"
     }
-    posts["posts (6)"] {
+    posts["posts (6) · Post"] {
         integer id PK
         integer user_id FK
         varchar title
@@ -55,7 +55,7 @@ erDiagram
         datetime created_at "nullable"
         datetime updated_at "nullable"
     }
-    reviews["reviews (8)"] {
+    reviews["reviews (8) · Review"] {
         integer id PK
         varchar reviewable_type "polymorphic"
         integer reviewable_id "polymorphic"
@@ -72,22 +72,22 @@ erDiagram
         datetime created_at "nullable"
         datetime updated_at "nullable"
     }
-    users["users (5)"] {
+    users["users (5) · User"] {
         integer id PK
         varchar name
         varchar email UK
         datetime created_at "nullable"
         datetime updated_at "nullable"
     }
-    videos["videos (6)"] {
+    videos["videos (6) · Video"] {
         integer id PK
         varchar title
         varchar url
-        datetime deleted_at "soft-delete, nullable"
+        datetime deleted_at "soft-delete, cast: datetime, nullable"
         datetime created_at "nullable"
         datetime updated_at "nullable"
     }
-    users ||--o{ ai_messages : "guessed has many via user_id"
+    users ||--o{ ai_messages : "hasMany via user_id"
     categories |o--o{ categories : "self-ref via parent_id, set null delete"
     users ||--o{ comments : "has many via user_id, cascade delete"
     posts ||--o{ comments : "has many via post_id, cascade delete"
@@ -95,8 +95,8 @@ erDiagram
     posts ||--o{ post_tag : "pivot, has many via post_id, cascade delete"
     users ||--o{ posts : "has many via user_id, cascade delete"
     users ||--o{ reviews : "has many via user_id, cascade delete"
-%% Unmapped polymorphic relations (add to config 'mermaid-erd.polymorphic_relationships'):
-%%   reviews.reviewable (reviewable_type + reviewable_id)
+    posts ||--o{ reviews : "morphMany via reviewable"
+    videos ||--o{ reviews : "morphMany via reviewable"
 ```
 <!-- mermaid-erd-end -->
 
@@ -198,6 +198,26 @@ return [
 By default, MySQL connections are scoped to the active database name so tables
 from other visible databases are not included in the diagram. Set `schema` if you
 want to inspect a specific schema/database explicitly.
+
+### Model metadata
+
+When enabled (the default), the package scans your Eloquent models and enriches the diagram with what only the code knows:
+
+- the owning model class in each table header (`orders (9) · Order`)
+- casts, accessors and mutators as column annotations (`varchar status "cast: OrderStatus"`)
+- polymorphic relations, auto-discovered from `morphOne` / `morphMany` / `morphToMany` methods — no manual `polymorphic_relationships` config needed for them
+- `hasMany` / `hasOne` / `belongsTo` relations for columns without a foreign key constraint — rendered with the declaring method (`hasMany via user_id`) and replacing the name-based guess. Precedence: foreign key constraint > model relation > guess.
+
+Only relation methods with an **explicit return type** are invoked (and each call is failure-isolated), so the scan never executes arbitrary model code. Configure it via:
+
+```php
+'models' => [
+    'enabled' => true,
+    'paths' => null, // null defaults to [app_path()]
+],
+```
+
+The `polymorphic_relationships` config still works and is merged on top — use it for morphs the scan cannot see (untyped relation methods, external packages).
 
 ### Smart relationship detection
 

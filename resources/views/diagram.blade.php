@@ -175,7 +175,8 @@
 
             const matched = new Set();
             for (const [table, columns] of Object.entries(graph.tables)) {
-                if (table.toLowerCase().includes(q) || columns.some(c => c.toLowerCase().includes(q))) {
+                const model = (graph.models[table] || '').toLowerCase();
+                if (table.toLowerCase().includes(q) || model.includes(q) || columns.some(c => c.toLowerCase().includes(q))) {
                     matched.add(table);
                 }
             }

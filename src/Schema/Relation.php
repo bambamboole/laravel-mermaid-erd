@@ -9,6 +9,7 @@ readonly class Relation
      * @param  string  $to  the table holding the reference (child)
      * @param  string[]  $columns  referencing column(s) on the child table
      * @param  ?string  $onDelete  lowercased action; null when absent or a no-op (no action, restrict)
+     * @param  ?string  $declaredAs  the Eloquent method that declared it, for Eloquent relations
      */
     public function __construct(
         public string $from,
@@ -19,6 +20,7 @@ readonly class Relation
         public bool $oneToOne = false,
         public ?string $onDelete = null,
         public ?string $morphName = null,
+        public ?string $declaredAs = null,
     ) {}
 
     public function selfReferential(): bool

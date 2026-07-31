@@ -17,6 +17,16 @@ return [
 
     'guess_relationships' => true,
 
+    'models' => [
+        // Scan Eloquent models to annotate tables (model class), columns
+        // (casts, accessors, mutators) and auto-discover relations from typed
+        // relation methods (hasMany/hasOne/belongsTo/morphOne/morphMany/morphToMany).
+        'enabled' => true,
+
+        // Directories to scan. null defaults to [app_path()].
+        'paths' => null,
+    ],
+
     'polymorphic_relationships' => [
         // 'table.morph_name' => [target_tables]
         // 'comments.commentable' => ['posts', 'videos'],
