@@ -77,7 +77,12 @@
 
         container.addEventListener('wheel', function(e) {
             e.preventDefault();
-            if (e.deltaY < 0) zoomIn(); else zoomOut();
+            // Zoom proportionally to the wheel delta: trackpads emit many
+            // small deltas (smooth glide), a mouse wheel notch (~100) matches
+            // roughly the old 15% step. deltaMode 1 means line-based deltas.
+            const delta = e.deltaMode === 1 ? e.deltaY * 24 : e.deltaY;
+            scale = Math.min(MAX_ZOOM, Math.max(MIN_ZOOM, scale * Math.exp(-delta * 0.002)));
+            applyTransform();
         }, { passive: false });
 
         container.addEventListener('mousedown', function(e) {
