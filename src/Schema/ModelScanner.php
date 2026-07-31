@@ -8,6 +8,7 @@ use Illuminate\Database\Eloquent\Relations\MorphMany;
 use Illuminate\Database\Eloquent\Relations\MorphOne;
 use Illuminate\Database\Eloquent\Relations\MorphToMany;
 use Illuminate\Support\Str;
+use Spatie\StructureDiscoverer\Discover;
 
 /**
  * Discovers Eloquent models and extracts diagram-relevant metadata. Only
@@ -158,51 +159,20 @@ class ModelScanner
      */
     private function discoverModelClasses(): array
     {
+        $paths = array_values(array_filter($this->paths, is_dir(...)));
+
+        if ($paths === []) {
+            return [];
+        }
+
         $classes = [];
-
-        foreach ($this->paths as $path) {
-            if (!is_dir($path)) {
-                continue;
-            }
-
-            $files = [];
-            $iterator = new \RecursiveIteratorIterator(
-                new \RecursiveDirectoryIterator($path, \FilesystemIterator::SKIP_DOTS),
-            );
-            foreach ($iterator as $file) {
-                if ($file instanceof \SplFileInfo && $file->getExtension() === 'php') {
-                    $files[] = $file->getPathname();
-                }
-            }
-            sort($files);
-
-            foreach ($files as $file) {
-                $class = $this->classFromFile($file);
-                if ($class !== null) {
-                    $classes[] = $class;
-                }
+        foreach (Discover::in(...$paths)->classes()->get() as $class) {
+            if (is_string($class) && class_exists($class)) {
+                $classes[] = $class;
             }
         }
+        sort($classes);
 
         return $classes;
-    }
-
-    /**
-     * @return class-string|null
-     */
-    private function classFromFile(string $file): ?string
-    {
-        $contents = (string) file_get_contents($file);
-
-        if (!preg_match('/^namespace\s+([^;\s]+)\s*;/m', $contents, $namespace)) {
-            return null;
-        }
-        if (!preg_match('/^\s*(?:final\s+|abstract\s+|readonly\s+)*class\s+(\w+)/m', $contents, $class)) {
-            return null;
-        }
-
-        $fqcn = $namespace[1].'\\'.$class[1];
-
-        return class_exists($fqcn) ? $fqcn : null;
     }
 }
