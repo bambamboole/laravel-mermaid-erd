@@ -7,7 +7,102 @@
 
 Generate Entity-Relationship Diagrams (ERDs) from your Laravel database schema using [Mermaid.js](https://mermaid.js.org/). Visualize tables, columns, and foreign key relationships with a single Artisan command.
 
+## Example
+
+Generated from this package's own test schema:
+
+<!-- mermaid-erd-start -->
+```mermaid
+---
+title: 9 tables · 52 columns
+---
+erDiagram
+    ai_messages["ai_messages (6)"] {
+        integer id PK
+        integer user_id
+        text prompt
+        text response "nullable"
+        datetime created_at "nullable"
+        datetime updated_at "nullable"
+    }
+    categories["categories (5)"] {
+        integer id PK
+        varchar name
+        integer parent_id FK "nullable"
+        datetime created_at "nullable"
+        datetime updated_at "nullable"
+    }
+    comments["comments (6)"] {
+        integer id PK
+        integer post_id FK
+        integer user_id FK
+        text body
+        datetime created_at "nullable"
+        datetime updated_at "nullable"
+    }
+    post_tag["post_tag (5)"] {
+        integer id PK
+        integer post_id FK
+        integer tag_id FK
+        datetime created_at "nullable"
+        datetime updated_at "nullable"
+    }
+    posts["posts (6)"] {
+        integer id PK
+        integer user_id FK
+        varchar title
+        text body
+        datetime created_at "nullable"
+        datetime updated_at "nullable"
+    }
+    reviews["reviews (8)"] {
+        integer id PK
+        varchar reviewable_type "polymorphic"
+        integer reviewable_id "polymorphic"
+        integer user_id FK
+        text body
+        integer rating
+        datetime created_at "nullable"
+        datetime updated_at "nullable"
+    }
+    tags["tags (5)"] {
+        integer id PK
+        varchar name
+        varchar slug UK
+        datetime created_at "nullable"
+        datetime updated_at "nullable"
+    }
+    users["users (5)"] {
+        integer id PK
+        varchar name
+        varchar email UK
+        datetime created_at "nullable"
+        datetime updated_at "nullable"
+    }
+    videos["videos (6)"] {
+        integer id PK
+        varchar title
+        varchar url
+        datetime deleted_at "soft-delete, nullable"
+        datetime created_at "nullable"
+        datetime updated_at "nullable"
+    }
+    users ||--o{ ai_messages : "guessed has many via user_id"
+    categories |o--o{ categories : "self-ref via parent_id, set null delete"
+    users ||--o{ comments : "has many via user_id, cascade delete"
+    posts ||--o{ comments : "has many via post_id, cascade delete"
+    tags ||--o{ post_tag : "pivot, has many via tag_id, cascade delete"
+    posts ||--o{ post_tag : "pivot, has many via post_id, cascade delete"
+    users ||--o{ posts : "has many via user_id, cascade delete"
+    users ||--o{ reviews : "has many via user_id, cascade delete"
+%% Unmapped polymorphic relations (add to config 'mermaid-erd.polymorphic_relationships'):
+%%   reviews.reviewable (reviewable_type + reviewable_id)
+```
+<!-- mermaid-erd-end -->
+
 ## Installation
+
+Requires PHP 8.3+ and Laravel 12 or 13.
 
 ```bash
 composer require bambamboole/laravel-mermaid-erd
@@ -99,10 +194,35 @@ want to inspect a specific schema/database explicitly.
 
 The generator automatically detects pivot tables (tables with exactly 2 foreign keys and only `id`/timestamp columns) and renders them as many-to-many relationships instead of separate entities. Foreign key columns with unique indexes are rendered as one-to-one relationships.
 
-## ERD
+## Web view
 
-<!-- mermaid-erd-start -->
-<!-- mermaid-erd-end -->
+The package also ships a web view that renders the diagram in the browser using Mermaid.js. It is enabled by default at `/mermaid-erd` and configurable via the `web` section of the config file:
+
+```php
+'web' => [
+    'enabled' => true,
+    'route' => '/mermaid-erd',
+    'middleware' => ['web'],
+
+    // Cache the generated diagram (useful for large schemas)
+    'cache' => [
+        'enabled' => false,
+        'ttl' => 3600,
+    ],
+
+    // Passed straight to mermaid.initialize()
+    'mermaid' => [
+        'theme' => 'default',
+        'securityLevel' => 'loose',
+        'logLevel' => 'error',
+        'er' => [
+            'useMaxWidth' => false,
+        ],
+    ],
+],
+```
+
+The view exposes your database structure, so protect it in production — add auth middleware to `web.middleware` or set `web.enabled` to `false`.
 
 ## Testing
 
@@ -113,14 +233,6 @@ composer test
 ## Changelog
 
 Please see [CHANGELOG](CHANGELOG.md) for more information on what has changed recently.
-
-## Contributing
-
-Please see [CONTRIBUTING](CONTRIBUTING.md) for details.
-
-## Security Vulnerabilities
-
-Please review [our security policy](../../security/policy) on how to report security vulnerabilities.
 
 ## Credits
 
