@@ -9,6 +9,7 @@
     "sail": false,
     "skills": [
         "laravel-best-practices",
-        "pest-testing"
+        "pest-testing",
+        "pr-review"
     ]
 }

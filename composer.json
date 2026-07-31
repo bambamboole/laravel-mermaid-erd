@@ -77,10 +77,7 @@
             "@rector:test",
             "@test"
         ],
-        "boost:refresh": [
-            "cp boost.json vendor/orchestra/testbench-core/laravel/boost.json",
-            "@php vendor/bin/testbench boost:update --no-interaction"
-        ]
+        "boost:refresh": "@php vendor/bin/testbench boost:update --no-interaction"
     },
     "config": {
         "platform": {
