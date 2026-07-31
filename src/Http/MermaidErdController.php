@@ -6,12 +6,14 @@ namespace Bambamboole\LaravelMermaidErd\Http;
 use Bambamboole\LaravelMermaidErd\MermaidErdRenderer;
 use Bambamboole\LaravelMermaidErd\Schema\SchemaBuilder;
 use Illuminate\Contracts\View\View as ViewContract;
+use Illuminate\Http\Request;
+use Illuminate\Http\Response;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\View;
 
 class MermaidErdController
 {
-    public function __invoke(SchemaBuilder $builder): ViewContract
+    public function __invoke(Request $request, SchemaBuilder $builder): ViewContract|Response
     {
         $connectionName = config('database.default');
         $cacheKey = "mermaid-erd:view:{$connectionName}";
@@ -33,6 +35,10 @@ class MermaidErdController
             );
         } else {
             $data = $generate();
+        }
+
+        if ($request->boolean('raw')) {
+            return new Response($data['diagram'], 200, ['Content-Type' => 'text/plain; charset=UTF-8']);
         }
 
         $jsonFlags = JSON_THROW_ON_ERROR | JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT;
