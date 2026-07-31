@@ -5,10 +5,18 @@ namespace Bambamboole\LaravelMermaidErd\Schema;
 use Bambamboole\LaravelMermaidErd\DatabaseInformationService;
 use Illuminate\Support\Str;
 
+/**
+ * @phpstan-import-type ForeignKeyRow from DatabaseInformationService
+ *
+ * @phpstan-type TableMeta array{foreignKeys: list<ForeignKeyRow>, uniqueColumns: string[], nullableColumns: string[], foreignKeyColumns: string[], polymorphicColumns: string[]}
+ */
 class SchemaBuilder
 {
     private const array PIVOT_EXTRA_COLUMNS = ['id', 'created_at', 'updated_at'];
 
+    /**
+     * @param  array<string, string[]>  $polymorphicRelationships
+     */
     public function __construct(
         private readonly DatabaseInformationService $databaseInformationService,
         private readonly array $polymorphicRelationships = [],
@@ -86,6 +94,12 @@ class SchemaBuilder
         return new Schema($tables, $this->buildRelations($tableNames, $tables, $meta));
     }
 
+    /**
+     * @param  string[]  $tableNames
+     * @param  array<string, Table>  $tables
+     * @param  array<string, TableMeta>  $meta
+     * @return list<Relation>
+     */
     private function buildRelations(array $tableNames, array $tables, array $meta): array
     {
         $relations = [];
@@ -130,6 +144,12 @@ class SchemaBuilder
         return $relations;
     }
 
+    /**
+     * @param  string[]  $tableNames
+     * @param  array<string, Table>  $tables
+     * @param  array<string, TableMeta>  $meta
+     * @return list<Relation>
+     */
     private function guessRelations(string $tableName, array $tableNames, array $tables, array $meta): array
     {
         $relations = [];
@@ -166,6 +186,7 @@ class SchemaBuilder
     }
 
     /**
+     * @param  string[]  $columnNames
      * @return array{0: string[], 1: string[]} [morph names, participating column names]
      */
     private function detectMorphs(array $columnNames): array
@@ -191,6 +212,11 @@ class SchemaBuilder
         return [$morphNames, $polymorphicColumns];
     }
 
+    /**
+     * @param  list<ForeignKeyRow>  $foreignKeys
+     * @param  string[]  $columnNames
+     * @param  string[]  $foreignKeyColumns
+     */
     private function isPivot(array $foreignKeys, array $columnNames, array $foreignKeyColumns): bool
     {
         if (count($foreignKeys) !== 2) {

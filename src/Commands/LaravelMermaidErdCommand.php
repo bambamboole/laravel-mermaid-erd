@@ -24,12 +24,10 @@ class LaravelMermaidErdCommand extends Command
 
     public function handle(): int
     {
-        $connectionName = $this->option('connection');
-        $connection = $this->laravel->make('db')->connection($connectionName);
+        $connection = $this->laravel->make('db')->connection($this->stringOption('connection'));
 
-        $onlyTables = $this->option('tables')
-            ? array_map(trim(...), explode(',', $this->option('tables')))
-            : [];
+        $tables = $this->stringOption('tables');
+        $onlyTables = $tables !== null ? array_map(trim(...), explode(',', $tables)) : [];
 
         $service = new DatabaseInformationService(
             $connection,
@@ -45,7 +43,7 @@ class LaravelMermaidErdCommand extends Command
         );
         $diagram = (new MermaidErdRenderer)->render($builder->build());
 
-        $output = $this->option('output') ?? select(
+        $output = $this->stringOption('output') ?? select(
             label: 'How would you like to output the diagram?',
             options: ['stdout', 'file'],
             default: 'stdout',
@@ -67,7 +65,7 @@ class LaravelMermaidErdCommand extends Command
 
     private function outputToFile(string $diagram): int
     {
-        $path = $this->option('path') ?? text(
+        $path = $this->stringOption('path') ?? text(
             label: 'Where should the diagram be saved?',
             default: 'README.md',
             required: true,
@@ -83,5 +81,12 @@ class LaravelMermaidErdCommand extends Command
         $this->info("Diagram written to {$path}");
 
         return self::SUCCESS;
+    }
+
+    private function stringOption(string $key): ?string
+    {
+        $value = $this->option($key);
+
+        return is_string($value) && $value !== '' ? $value : null;
     }
 }
