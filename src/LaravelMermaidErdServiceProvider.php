@@ -30,7 +30,7 @@ class LaravelMermaidErdServiceProvider extends PackageServiceProvider
         ));
 
         $this->app->bind(ModelScanner::class, fn (): ModelScanner => new ModelScanner(
-            config('mermaid-erd.models.paths') ?? [app_path('Models')],
+            config('mermaid-erd.models.paths') ?? [app_path()],
         ));
 
         $this->app->bind(SchemaBuilder::class, fn ($app): SchemaBuilder => new SchemaBuilder(
