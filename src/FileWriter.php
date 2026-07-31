@@ -30,7 +30,8 @@ class FileWriter
             $pattern = '/'.preg_quote(self::START_TAG, '/').'.*?'.preg_quote(self::END_TAG, '/').'/s';
             // Only fill the first tag pair so later pairs (e.g. a usage example
             // documenting the tags) are left untouched.
-            $content = preg_replace_callback($pattern, fn (): string => $mermaidBlock, $content, 1);
+            $content = preg_replace_callback($pattern, fn (): string => $mermaidBlock, $content, 1)
+                ?? throw new \RuntimeException("Failed to replace the ERD block in {$path}");
         } else {
             $content = rtrim($content)."\n\n## ERD\n\n{$mermaidBlock}\n";
         }
