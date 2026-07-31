@@ -118,6 +118,15 @@ it('uses configured schema for table discovery when provided', function () {
     expect($service->getTables())->toBe(['invoices']);
 });
 
+it('passes configured schema to the container-resolved service', function () {
+    config()->set('mermaid-erd.schema', 'reporting_schema');
+
+    $service = $this->app->make(DatabaseInformationService::class);
+
+    $schema = (new ReflectionProperty($service, 'schema'))->getValue($service);
+    expect($schema)->toBe('reporting_schema');
+});
+
 it('keeps default schema discovery for non-mysql connections', function () {
     $schemaBuilder = Mockery::mock(Builder::class);
     $schemaBuilder
