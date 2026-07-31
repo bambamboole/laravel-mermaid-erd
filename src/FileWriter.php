@@ -16,6 +16,12 @@ class FileWriter
 
     public function write(string $path, string $diagram): void
     {
+        if (str_ends_with($path, '.mmd')) {
+            $this->filesystem->put($path, $diagram);
+
+            return;
+        }
+
         $mermaidBlock = self::START_TAG."\n```mermaid\n{$diagram}```\n".self::END_TAG;
 
         if (!$this->filesystem->exists($path)) {
