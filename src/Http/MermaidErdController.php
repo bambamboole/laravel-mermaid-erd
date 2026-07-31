@@ -3,26 +3,29 @@
 declare(strict_types=1);
 namespace Bambamboole\LaravelMermaidErd\Http;
 
-use Bambamboole\LaravelMermaidErd\MermaidErdGenerator;
+use Bambamboole\LaravelMermaidErd\MermaidErdRenderer;
+use Bambamboole\LaravelMermaidErd\Schema\SchemaBuilder;
 use Illuminate\Contracts\View\View as ViewContract;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\View;
 
 class MermaidErdController
 {
-    public function __invoke(MermaidErdGenerator $generator): ViewContract
+    public function __invoke(SchemaBuilder $builder): ViewContract
     {
         $connectionName = config('database.default');
         $cacheKey = "mermaid-erd:diagram:{$connectionName}";
+
+        $generate = fn (): string => (new MermaidErdRenderer)->render($builder->build());
 
         if (config('mermaid-erd.web.cache.enabled')) {
             $diagram = Cache::remember(
                 $cacheKey,
                 config('mermaid-erd.web.cache.ttl', 3600),
-                fn (): string => $generator->generate(),
+                $generate,
             );
         } else {
-            $diagram = $generator->generate();
+            $diagram = $generate();
         }
 
         return View::make('mermaid-erd::diagram', [
