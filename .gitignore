@@ -8,3 +8,8 @@ phpunit.xml
 phpstan.neon
 vendor
 node_modules
+
+# Laravel Boost (regenerate with `composer boost:refresh`)
+AGENTS.md
+CLAUDE.md
+.claude
