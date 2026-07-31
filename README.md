@@ -143,6 +143,7 @@ Writes the diagram to the specified file (defaults to `README.md`). The file out
 - **File has tags**: replaces content between the tags
 - **File exists without tags**: appends an `## ERD` section with the diagram
 - **File doesn't exist**: creates it with the diagram
+- **Path ends in `.mmd`**: writes the plain Mermaid source without any markdown wrapper
 
 Add these tags where you want the diagram to appear:
 
@@ -167,6 +168,14 @@ Only include specific tables (comma-separated):
 
 ```bash
 php artisan generate:mermaid-erd --output=stdout --tables=users,posts,comments
+```
+
+#### `--exclude-tables`
+
+Exclude specific tables, on top of the configured ignore list:
+
+```bash
+php artisan generate:mermaid-erd --output=stdout --exclude-tables=audit_logs,ai_messages
 ```
 
 ### Configuration
@@ -198,7 +207,9 @@ The generator automatically detects pivot tables (tables with exactly 2 foreign 
 
 The package also ships a web view that renders the diagram in the browser using Mermaid.js. It is enabled by default at `/mermaid-erd` and configurable via the `web` section of the config file.
 
-The view has a search box that filters the diagram live: type a table or column name and only matching tables plus their directly connected neighbors stay visible. Pivot tables are treated as pass-throughs — a many-to-many counts as one relation, so both of its sides stay visible. The query is kept in the URL (`?q=orders`), so filtered views are shareable, and "Copy Mermaid" / "Download SVG" export exactly what is on screen.
+The view has a search box that filters the diagram live: type a table or column name and only matching tables plus their directly connected neighbors stay visible. Pivot tables are treated as pass-throughs — a many-to-many counts as one relation, so both of its sides stay visible.
+
+Append `?raw=1` to the route to get the plain Mermaid source as `text/plain` — handy for scripts or pasting into [mermaid.live](https://mermaid.live). The query is kept in the URL (`?q=orders`), so filtered views are shareable, and "Copy Mermaid" / "Download SVG" export exactly what is on screen.
 
 ```php
 'web' => [
