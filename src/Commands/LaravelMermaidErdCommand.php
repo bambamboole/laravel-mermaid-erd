@@ -18,7 +18,8 @@ class LaravelMermaidErdCommand extends Command
         {--output= : Output mode: stdout or file}
         {--path= : File path for "file" output mode}
         {--connection= : Database connection to use}
-        {--tables= : Comma-separated list of tables to include}';
+        {--tables= : Comma-separated list of tables to include}
+        {--exclude-tables= : Comma-separated list of tables to exclude, on top of the configured ignore list}';
 
     protected $description = 'Generate a Mermaid.js ER diagram from the database schema';
 
@@ -29,9 +30,15 @@ class LaravelMermaidErdCommand extends Command
         $tables = $this->stringOption('tables');
         $onlyTables = $tables !== null ? array_map(trim(...), explode(',', $tables)) : [];
 
+        $excludeTables = $this->stringOption('exclude-tables');
+        $ignoreTables = array_merge(
+            config('mermaid-erd.ignore_tables', []),
+            $excludeTables !== null ? array_map(trim(...), explode(',', $excludeTables)) : [],
+        );
+
         $service = new DatabaseInformationService(
             $connection,
-            config('mermaid-erd.ignore_tables', []),
+            $ignoreTables,
             $onlyTables,
             config('mermaid-erd.schema'),
         );
