@@ -19,6 +19,36 @@ readonly class Schema
     }
 
     /**
+     * Lightweight graph representation for client-side filtering.
+     *
+     * @return array{tables: array<string, string[]>, pivots: string[], edges: array<int, array{0: string, 1: string}>}
+     */
+    public function toGraph(): array
+    {
+        $tables = [];
+        $pivots = [];
+        foreach ($this->tables as $table) {
+            $tables[$table->name] = array_map(fn (Column $column): string => $column->name, $table->columns);
+            if ($table->pivot) {
+                $pivots[] = $table->name;
+            }
+        }
+
+        $edges = [];
+        $seen = [];
+        foreach ($this->relations as $relation) {
+            $key = "{$relation->from}|{$relation->to}";
+            if (isset($seen[$key])) {
+                continue;
+            }
+            $seen[$key] = true;
+            $edges[] = [$relation->from, $relation->to];
+        }
+
+        return ['tables' => $tables, 'pivots' => $pivots, 'edges' => $edges];
+    }
+
+    /**
      * Detected morph pairs without a configured morph relation, as "table.morphName".
      *
      * @return string[]

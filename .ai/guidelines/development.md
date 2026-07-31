@@ -11,9 +11,10 @@
 - **Assertions on generated diagrams must stay driver-agnostic.** Column type names differ per
   driver (`integer` vs `bigint` vs `int8`) and defaults render differently (Postgres emits
   `nextval(...)`). Match constraint markers (`\w+ id PK`), never concrete type names.
-- The example ERD in `README.md` is generated from the workbench schema. Regenerate it whenever the
-  workbench migrations or the diagram output format change:
-  `vendor/bin/testbench workbench:build && vendor/bin/testbench generate:mermaid-erd --output=file --path=$PWD/README.md`
+- The example ERD in `README.md` is generated from the workbench schema, scoped to the original blog
+  tables so it stays readable (the full workbench schema is intentionally large to exercise the web
+  view filter). Regenerate it whenever those tables or the diagram output format change:
+  `vendor/bin/testbench workbench:build && vendor/bin/testbench generate:mermaid-erd --output=file --path=$PWD/README.md --tables=users,posts,comments,tags,post_tag,videos,reviews,categories,ai_messages`
 - Regenerate `CLAUDE.md` after editing `.ai/guidelines/`, `.ai/skills/`, or `boost.json` with
   `composer boost:refresh`.
 - The Boost path overrides for the Testbench context live in `workbench/app/Support/` and are wired

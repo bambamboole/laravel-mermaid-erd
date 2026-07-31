@@ -102,9 +102,21 @@ it('builds morph relations from configured mappings', function (): void {
     expect($morphs->pluck('from')->all())->toBe(['posts', 'videos'])
         ->and($morphs->first()->to)->toBe('reviews')
         ->and($morphs->first()->morphName)->toBe('reviewable')
-        ->and($schema->unmappedMorphs())->toBe([]);
+        ->and($schema->unmappedMorphs())->not->toContain('reviews.reviewable');
 });
 
 it('reports unmapped morph pairs', function (): void {
-    expect(buildSchema()->unmappedMorphs())->toBe(['reviews.reviewable']);
+    expect(buildSchema()->unmappedMorphs())->toBe(['attachments.attachable', 'reviews.reviewable']);
+});
+
+it('exposes a graph representation for filtering', function (): void {
+    $graph = buildSchema()->toGraph();
+
+    expect($graph['tables']['users'])->toBe(['id', 'name', 'email', 'created_at', 'updated_at'])
+        ->and($graph['pivots'])->toContain('post_tag')
+        ->and($graph['pivots'])->toContain('coupon_order')
+        ->and($graph['pivots'])->not->toContain('stocks')
+        ->and($graph['edges'])->toContain(['posts', 'comments'])
+        ->and($graph['edges'])->toContain(['users', 'ai_messages'])
+        ->and(collect($graph['edges'])->duplicates()->all())->toBe([]);
 });
