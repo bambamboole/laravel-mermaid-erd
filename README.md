@@ -198,7 +198,7 @@ The generator automatically detects pivot tables (tables with exactly 2 foreign 
 
 The package also ships a web view that renders the diagram in the browser using Mermaid.js. It is enabled by default at `/mermaid-erd` and configurable via the `web` section of the config file.
 
-The view has a search box that filters the diagram live: type a table or column name and only matching tables plus their directly connected neighbors stay visible. The query is kept in the URL (`?q=orders`), so filtered views are shareable, and "Copy Mermaid" / "Download SVG" export exactly what is on screen.
+The view has a search box that filters the diagram live: type a table or column name and only matching tables plus their directly connected neighbors stay visible. Pivot tables are treated as pass-throughs — a many-to-many counts as one relation, so both of its sides stay visible. The query is kept in the URL (`?q=orders`), so filtered views are shareable, and "Copy Mermaid" / "Download SVG" export exactly what is on screen.
 
 ```php
 'web' => [

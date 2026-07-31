@@ -113,6 +113,9 @@ it('exposes a graph representation for filtering', function (): void {
     $graph = buildSchema()->toGraph();
 
     expect($graph['tables']['users'])->toBe(['id', 'name', 'email', 'created_at', 'updated_at'])
+        ->and($graph['pivots'])->toContain('post_tag')
+        ->and($graph['pivots'])->toContain('coupon_order')
+        ->and($graph['pivots'])->not->toContain('stocks')
         ->and($graph['edges'])->toContain(['posts', 'comments'])
         ->and($graph['edges'])->toContain(['users', 'ai_messages'])
         ->and(collect($graph['edges'])->duplicates()->all())->toBe([]);

@@ -152,6 +152,7 @@
         })(mermaidSource);
 
         const totalTables = Object.keys(graph.tables).length;
+        const pivots = new Set(graph.pivots);
 
         function computeVisible(query) {
             const q = query.trim().toLowerCase();
@@ -168,6 +169,13 @@
             for (const [from, to] of graph.edges) {
                 if (matched.has(from)) visible.add(to);
                 if (matched.has(to)) visible.add(from);
+            }
+
+            // Pivot tables are pass-throughs: a many-to-many is one logical
+            // relation, so both sides of a visible pivot stay visible.
+            for (const [from, to] of graph.edges) {
+                if (visible.has(from) && pivots.has(from)) visible.add(to);
+                if (visible.has(to) && pivots.has(to)) visible.add(from);
             }
 
             return visible;

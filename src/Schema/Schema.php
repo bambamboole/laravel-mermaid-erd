@@ -21,13 +21,17 @@ readonly class Schema
     /**
      * Lightweight graph representation for client-side filtering.
      *
-     * @return array{tables: array<string, string[]>, edges: array<int, array{0: string, 1: string}>}
+     * @return array{tables: array<string, string[]>, pivots: string[], edges: array<int, array{0: string, 1: string}>}
      */
     public function toGraph(): array
     {
         $tables = [];
+        $pivots = [];
         foreach ($this->tables as $table) {
             $tables[$table->name] = array_map(fn (Column $column): string => $column->name, $table->columns);
+            if ($table->pivot) {
+                $pivots[] = $table->name;
+            }
         }
 
         $edges = [];
@@ -41,7 +45,7 @@ readonly class Schema
             $edges[] = [$relation->from, $relation->to];
         }
 
-        return ['tables' => $tables, 'edges' => $edges];
+        return ['tables' => $tables, 'pivots' => $pivots, 'edges' => $edges];
     }
 
     /**
