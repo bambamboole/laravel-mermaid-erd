@@ -2,6 +2,29 @@
 
 All notable changes to `laravel-mermaid-erd` will be documented in this file.
 
+## [0.5.0](https://github.com/bambamboole/laravel-mermaid-erd/compare/0.4.0...0.5.0) (2026-07-31)
+
+
+### Features
+
+* --exclude-tables option ([ac8d320](https://github.com/bambamboole/laravel-mermaid-erd/commit/ac8d320af51ec1739591c81cce2f87aea597cc42))
+* discover hasMany/hasOne/belongsTo relations from models ([8ecd4f3](https://github.com/bambamboole/laravel-mermaid-erd/commit/8ecd4f3044b39466b26f0b04c356a5acd0aeb08d))
+* enrich the diagram with Eloquent model metadata ([de5edc5](https://github.com/bambamboole/laravel-mermaid-erd/commit/de5edc55f457a5cda9ca7dfe58857a29e202d974))
+* raw mermaid source endpoint via ?raw=1 ([d460daf](https://github.com/bambamboole/laravel-mermaid-erd/commit/d460daf5bc25ed3a3f817a8b8b950018fcca5f25))
+* scan all of app_path() for models by default ([2654f25](https://github.com/bambamboole/laravel-mermaid-erd/commit/2654f252001facb19aad6c1e4a218b8c1f6ecc22))
+* write plain mermaid source for .mmd paths ([a8d3647](https://github.com/bambamboole/laravel-mermaid-erd/commit/a8d3647deb99b7887cf91bb1989382526bf4f61b))
+* zoom toward the cursor in the web view ([76488f6](https://github.com/bambamboole/laravel-mermaid-erd/commit/76488f6fa53bf2f4c2582cdf46cc5682acff8b98))
+
+
+### Refactoring
+
+* discover model classes with spatie/php-structure-discoverer ([6ea8504](https://github.com/bambamboole/laravel-mermaid-erd/commit/6ea8504448f2702ead16002d00b4bd5c889a991e))
+
+
+### Documentation
+
+* document raw endpoint, --exclude-tables and .mmd output ([0a06654](https://github.com/bambamboole/laravel-mermaid-erd/commit/0a0665438cb996555c09c5962c81a54597d0c5a2))
+
 ## [0.4.0](https://github.com/bambamboole/laravel-mermaid-erd/compare/0.3.5...0.4.0) (2026-07-31)
 
 
