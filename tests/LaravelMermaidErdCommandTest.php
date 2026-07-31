@@ -78,6 +78,28 @@ it('injects diagram into file between existing tags', function (): void {
     unlink($path);
 });
 
+it('only fills the first tag pair when a file contains several', function (): void {
+    $path = tempnam(sys_get_temp_dir(), 'mermaid_test_');
+    file_put_contents($path, implode("\n", [
+        '# My Project',
+        '<!-- mermaid-erd-start -->',
+        '<!-- mermaid-erd-end -->',
+        '## Usage example documenting the tags',
+        '<!-- mermaid-erd-start -->',
+        '<!-- mermaid-erd-end -->',
+    ]));
+
+    $this->artisan('generate:mermaid-erd', ['--output' => 'file', '--path' => $path])
+        ->assertSuccessful();
+
+    $content = file_get_contents($path);
+
+    expect(substr_count($content, '```mermaid'))->toBe(1)
+        ->and($content)->toContain("## Usage example documenting the tags\n<!-- mermaid-erd-start -->\n<!-- mermaid-erd-end -->");
+
+    unlink($path);
+});
+
 it('replaces existing diagram content between tags', function (): void {
     $path = copyFixtureToTemp('readme-with-old-content.md');
 
