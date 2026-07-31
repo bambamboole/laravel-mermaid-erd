@@ -13,7 +13,7 @@ workbench:
   discovers:
     web: true
     api: false
-    commands: false
+    commands: true
     components: false
     factories: false
     views: false

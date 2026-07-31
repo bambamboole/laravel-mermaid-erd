@@ -19,7 +19,7 @@ class MermaidErdController
             $diagram = Cache::remember(
                 $cacheKey,
                 config('mermaid-erd.web.cache.ttl', 3600),
-                fn () => $generator->generate(),
+                fn (): string => $generator->generate(),
             );
         } else {
             $diagram = $generator->generate();

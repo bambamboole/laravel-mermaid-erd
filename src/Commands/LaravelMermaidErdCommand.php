@@ -27,7 +27,7 @@ class LaravelMermaidErdCommand extends Command
         $connection = $this->laravel->make('db')->connection($connectionName);
 
         $onlyTables = $this->option('tables')
-            ? array_map('trim', explode(',', $this->option('tables')))
+            ? array_map(trim(...), explode(',', $this->option('tables')))
             : [];
 
         $service = new DatabaseInformationService(

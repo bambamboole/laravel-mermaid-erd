@@ -4,7 +4,7 @@ use Bambamboole\LaravelMermaidErd\DatabaseInformationService;
 use Illuminate\Database\Connection;
 use Illuminate\Database\Schema\Builder;
 
-it('retrieves tables from a real database', function () {
+it('retrieves tables from a real database', function (): void {
     $service = new DatabaseInformationService($this->app['db']->connection());
     $tables = $service->getTables();
 
@@ -16,7 +16,7 @@ it('retrieves tables from a real database', function () {
         ->toContain('post_tag');
 });
 
-it('retrieves foreign keys from a real database', function () {
+it('retrieves foreign keys from a real database', function (): void {
     $service = new DatabaseInformationService($this->app['db']->connection());
     $foreignKeys = $service->getForeignKeys('comments');
 
@@ -26,7 +26,7 @@ it('retrieves foreign keys from a real database', function () {
     expect($foreignTables)->toContain('posts')->toContain('users');
 });
 
-it('retrieves columns from a real database', function () {
+it('retrieves columns from a real database', function (): void {
     $service = new DatabaseInformationService($this->app['db']->connection());
     $columns = $service->getColumns('users');
 
@@ -38,7 +38,7 @@ it('retrieves columns from a real database', function () {
     expect($types[1])->toBeIn(['varchar', 'character varying']);
 });
 
-it('retrieves indexes from a real database', function () {
+it('retrieves indexes from a real database', function (): void {
     $service = new DatabaseInformationService($this->app['db']->connection());
     $indexes = $service->getIndexes('users');
 
@@ -47,7 +47,7 @@ it('retrieves indexes from a real database', function () {
     expect($primaryIndex['columns'])->toBe(['id']);
 });
 
-it('filters ignored tables from a real database', function () {
+it('filters ignored tables from a real database', function (): void {
     $service = new DatabaseInformationService(
         $this->app['db']->connection(),
         ['posts', 'comments'],
@@ -61,7 +61,7 @@ it('filters ignored tables from a real database', function () {
         ->not->toContain('comments');
 });
 
-it('filters to only specified tables', function () {
+it('filters to only specified tables', function (): void {
     $service = new DatabaseInformationService(
         $this->app['db']->connection(),
         [],
@@ -77,7 +77,7 @@ it('filters to only specified tables', function () {
         ->not->toContain('post_tag');
 });
 
-it('scopes mysql table discovery to the current database by default', function () {
+it('scopes mysql table discovery to the current database by default', function (): void {
     $schemaBuilder = Mockery::mock(Builder::class);
     $schemaBuilder
         ->shouldReceive('getTables')
@@ -98,7 +98,7 @@ it('scopes mysql table discovery to the current database by default', function (
     expect($service->getTables())->toBe(['users', 'posts']);
 });
 
-it('uses configured schema for table discovery when provided', function () {
+it('uses configured schema for table discovery when provided', function (): void {
     $schemaBuilder = Mockery::mock(Builder::class);
     $schemaBuilder
         ->shouldReceive('getTables')
@@ -118,7 +118,16 @@ it('uses configured schema for table discovery when provided', function () {
     expect($service->getTables())->toBe(['invoices']);
 });
 
-it('keeps default schema discovery for non-mysql connections', function () {
+it('passes configured schema to the container-resolved service', function (): void {
+    config()->set('mermaid-erd.schema', 'reporting_schema');
+
+    $service = $this->app->make(DatabaseInformationService::class);
+
+    $schema = (new ReflectionProperty($service, 'schema'))->getValue($service);
+    expect($schema)->toBe('reporting_schema');
+});
+
+it('keeps default schema discovery for non-mysql connections', function (): void {
     $schemaBuilder = Mockery::mock(Builder::class);
     $schemaBuilder
         ->shouldReceive('getTables')

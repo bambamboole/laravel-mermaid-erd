@@ -28,7 +28,9 @@ class FileWriter
 
         if (str_contains($content, self::START_TAG) && str_contains($content, self::END_TAG)) {
             $pattern = '/'.preg_quote(self::START_TAG, '/').'.*?'.preg_quote(self::END_TAG, '/').'/s';
-            $content = preg_replace($pattern, $mermaidBlock, $content);
+            // Only fill the first tag pair so later pairs (e.g. a usage example
+            // documenting the tags) are left untouched.
+            $content = preg_replace_callback($pattern, fn (): string => $mermaidBlock, $content, 1);
         } else {
             $content = rtrim($content)."\n\n## ERD\n\n{$mermaidBlock}\n";
         }

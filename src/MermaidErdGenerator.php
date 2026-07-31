@@ -116,9 +116,7 @@ class MermaidErdGenerator
             $diagram .= $line."\n";
         }
 
-        $diagram .= "    }\n";
-
-        return $diagram;
+        return $diagram."    }\n";
     }
 
     protected function generateRelationships(string $table, array $activeTables, array $pivotTableNames = []): string
@@ -156,8 +154,8 @@ class MermaidErdGenerator
             }
             $label .= " via {$columnLabel}";
 
-            $onDelete = $foreignKey['on_delete'] ?? '';
-            if ($onDelete !== '' && !in_array(strtolower($onDelete), ['no action', 'restrict'])) {
+            $onDelete = strtolower($foreignKey['on_delete'] ?? '');
+            if ($onDelete !== '' && !in_array($onDelete, ['no action', 'restrict'])) {
                 $label .= ", {$onDelete} delete";
             }
 

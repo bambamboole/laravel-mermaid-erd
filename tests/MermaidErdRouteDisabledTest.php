@@ -3,6 +3,7 @@ namespace Bambamboole\LaravelMermaidErd\Tests;
 
 class MermaidErdRouteDisabledTest extends TestCase
 {
+    #[\Override]
     public function getEnvironmentSetUp($app): void
     {
         parent::getEnvironmentSetUp($app);
