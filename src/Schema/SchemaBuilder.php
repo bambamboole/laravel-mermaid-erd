@@ -21,6 +21,7 @@ class SchemaBuilder
         private readonly DatabaseInformationService $databaseInformationService,
         private readonly array $polymorphicRelationships = [],
         private readonly bool $guessRelationships = true,
+        private readonly ?ModelScan $models = null,
     ) {}
 
     public function build(): Schema
@@ -54,6 +55,11 @@ class SchemaBuilder
 
             [$morphNames, $polymorphicColumns] = $this->detectMorphs($columnNames);
 
+            $metadata = $this->models?->models[$tableName] ?? null;
+            $casts = $metadata->casts ?? [];
+            $accessors = $metadata->accessors ?? [];
+            $mutators = $metadata->mutators ?? [];
+
             $columns = [];
             $nullableColumns = [];
             foreach ($rawColumns as $rawColumn) {
@@ -72,6 +78,9 @@ class SchemaBuilder
                     unique: in_array($name, $uniqueColumns),
                     softDelete: $name === 'deleted_at',
                     polymorphic: in_array($name, $polymorphicColumns),
+                    cast: $casts[$name] ?? null,
+                    accessor: in_array($name, $accessors),
+                    mutator: in_array($name, $mutators),
                 );
             }
 
@@ -80,6 +89,7 @@ class SchemaBuilder
                 columns: $columns,
                 pivot: $this->isPivot($foreignKeys, $columnNames, $foreignKeyColumns),
                 morphNames: $morphNames,
+                model: $metadata?->class,
             );
 
             $meta[$tableName] = [
@@ -129,9 +139,13 @@ class SchemaBuilder
             }
         }
 
-        foreach ($this->polymorphicRelationships as $key => $targetTables) {
-            [$tableName, $morphName] = explode('.', (string) $key, 2);
+        foreach ($this->morphRelationships() as $key => $targetTables) {
+            [$tableName, $morphName] = explode('.', $key, 2);
             foreach ($targetTables as $targetTable) {
+                if (!isset($tables[$tableName]) || !isset($tables[$targetTable])) {
+                    continue;
+                }
+
                 $relations[] = new Relation(
                     from: $targetTable,
                     to: $tableName,
@@ -142,6 +156,22 @@ class SchemaBuilder
         }
 
         return $relations;
+    }
+
+    /**
+     * Scanned morph relations merged with the configured mappings.
+     *
+     * @return array<string, string[]>
+     */
+    private function morphRelationships(): array
+    {
+        $merged = $this->models->morphRelationships ?? [];
+
+        foreach ($this->polymorphicRelationships as $key => $targets) {
+            $merged[$key] = array_values(array_unique(array_merge($merged[$key] ?? [], $targets)));
+        }
+
+        return $merged;
     }
 
     /**

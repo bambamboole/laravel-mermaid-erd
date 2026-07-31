@@ -5,6 +5,7 @@ namespace Bambamboole\LaravelMermaidErd\Commands;
 use Bambamboole\LaravelMermaidErd\DatabaseInformationService;
 use Bambamboole\LaravelMermaidErd\FileWriter;
 use Bambamboole\LaravelMermaidErd\MermaidErdRenderer;
+use Bambamboole\LaravelMermaidErd\Schema\ModelScanner;
 use Bambamboole\LaravelMermaidErd\Schema\SchemaBuilder;
 use Illuminate\Console\Command;
 use Illuminate\Filesystem\Filesystem;
@@ -47,6 +48,7 @@ class LaravelMermaidErdCommand extends Command
             $service,
             config('mermaid-erd.polymorphic_relationships', []),
             config('mermaid-erd.guess_relationships', true),
+            config('mermaid-erd.models.enabled', true) ? $this->laravel->make(ModelScanner::class)->scan() : null,
         );
         $diagram = (new MermaidErdRenderer)->render($builder->build());
 

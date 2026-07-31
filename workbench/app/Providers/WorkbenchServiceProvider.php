@@ -32,6 +32,8 @@ class WorkbenchServiceProvider extends ServiceProvider
     {
         Route::view('/', 'welcome');
 
+        config(['mermaid-erd.models.paths' => [package_path('workbench/app/Models')]]);
+
         $this->redirectBoostSkillsToPackageRoot();
     }
 

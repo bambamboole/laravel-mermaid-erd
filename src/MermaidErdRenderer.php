@@ -40,7 +40,11 @@ class MermaidErdRenderer
     private function renderTable(Table $table): string
     {
         $columnCount = count($table->columns);
-        $diagram = "    {$table->name}[\"{$table->name} ({$columnCount})\"] {\n";
+        $header = "{$table->name} ({$columnCount})";
+        if ($table->model !== null) {
+            $header .= ' · '.class_basename($table->model);
+        }
+        $diagram = "    {$table->name}[\"{$header}\"] {\n";
 
         foreach ($table->columns as $column) {
             $diagram .= $this->renderColumn($column)."\n";
@@ -73,6 +77,16 @@ class MermaidErdRenderer
         }
         if ($column->polymorphic) {
             $comments[] = 'polymorphic';
+        }
+        if ($column->cast !== null) {
+            $cast = str_contains($column->cast, '\\') ? class_basename($column->cast) : $column->cast;
+            $comments[] = "cast: {$cast}";
+        }
+        if ($column->accessor) {
+            $comments[] = 'accessor';
+        }
+        if ($column->mutator) {
+            $comments[] = 'mutator';
         }
         if ($column->nullable) {
             $comments[] = 'nullable';
