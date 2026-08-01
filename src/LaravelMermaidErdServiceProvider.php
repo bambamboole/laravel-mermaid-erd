@@ -5,23 +5,15 @@ namespace Bambamboole\LaravelMermaidErd;
 use Bambamboole\LaravelMermaidErd\Commands\LaravelMermaidErdCommand;
 use Bambamboole\LaravelMermaidErd\Schema\ModelScanner;
 use Bambamboole\LaravelMermaidErd\Schema\SchemaBuilder;
-use Spatie\LaravelPackageTools\Package;
-use Spatie\LaravelPackageTools\PackageServiceProvider;
+use Illuminate\Support\ServiceProvider;
 
-class LaravelMermaidErdServiceProvider extends PackageServiceProvider
+class LaravelMermaidErdServiceProvider extends ServiceProvider
 {
-    public function configurePackage(Package $package): void
+    #[\Override]
+    public function register(): void
     {
-        $package
-            ->name('laravel-mermaid-erd')
-            ->hasConfigFile()
-            ->hasViews()
-            ->hasRoute('web')
-            ->hasCommand(LaravelMermaidErdCommand::class);
-    }
+        $this->mergeConfigFrom(__DIR__.'/../config/mermaid-erd.php', 'mermaid-erd');
 
-    public function bootingPackage(): void
-    {
         $this->app->bind(DatabaseInformationService::class, fn ($app): DatabaseInformationService => new DatabaseInformationService(
             $app->make('db')->connection(),
             config('mermaid-erd.ignore_tables', []),
@@ -33,11 +25,24 @@ class LaravelMermaidErdServiceProvider extends PackageServiceProvider
             config('mermaid-erd.models.paths') ?? [app_path()],
         ));
 
-        $this->app->bind(SchemaBuilder::class, fn ($app): SchemaBuilder => new SchemaBuilder(
+        $this->app->bind(SchemaBuilder::class, fn ($app): SchemaBuilder => SchemaBuilder::fromConfig(
             $app->make(DatabaseInformationService::class),
-            config('mermaid-erd.polymorphic_relationships', []),
-            config('mermaid-erd.guess_relationships', true),
-            config('mermaid-erd.models.enabled', true) ? $app->make(ModelScanner::class)->scan() : null,
         ));
+    }
+
+    public function boot(): void
+    {
+        $this->loadViewsFrom(__DIR__.'/../resources/views', 'mermaid-erd');
+        $this->loadRoutesFrom(__DIR__.'/../routes/web.php');
+
+        if ($this->app->runningInConsole()) {
+            $this->publishes([
+                __DIR__.'/../config/mermaid-erd.php' => config_path('mermaid-erd.php'),
+            ], 'mermaid-erd-config');
+            $this->publishes([
+                __DIR__.'/../resources/views' => resource_path('views/vendor/mermaid-erd'),
+            ], 'mermaid-erd-views');
+            $this->commands(LaravelMermaidErdCommand::class);
+        }
     }
 }

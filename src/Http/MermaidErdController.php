@@ -27,15 +27,9 @@ class MermaidErdController
             ];
         };
 
-        if (config('mermaid-erd.web.cache.enabled')) {
-            $data = Cache::remember(
-                $cacheKey,
-                config('mermaid-erd.web.cache.ttl', 3600),
-                $generate,
-            );
-        } else {
-            $data = $generate();
-        }
+        $data = config('mermaid-erd.web.cache.enabled')
+            ? Cache::remember($cacheKey, config('mermaid-erd.web.cache.ttl', 3600), $generate)
+            : $generate();
 
         if ($request->boolean('raw')) {
             return new Response($data['diagram'], 200, ['Content-Type' => 'text/plain; charset=UTF-8']);

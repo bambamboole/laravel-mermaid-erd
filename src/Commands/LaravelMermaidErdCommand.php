@@ -5,10 +5,8 @@ namespace Bambamboole\LaravelMermaidErd\Commands;
 use Bambamboole\LaravelMermaidErd\DatabaseInformationService;
 use Bambamboole\LaravelMermaidErd\FileWriter;
 use Bambamboole\LaravelMermaidErd\MermaidErdRenderer;
-use Bambamboole\LaravelMermaidErd\Schema\ModelScanner;
 use Bambamboole\LaravelMermaidErd\Schema\SchemaBuilder;
 use Illuminate\Console\Command;
-use Illuminate\Filesystem\Filesystem;
 
 use function Laravel\Prompts\select;
 use function Laravel\Prompts\text;
@@ -44,13 +42,7 @@ class LaravelMermaidErdCommand extends Command
             config('mermaid-erd.schema'),
         );
 
-        $builder = new SchemaBuilder(
-            $service,
-            config('mermaid-erd.polymorphic_relationships', []),
-            config('mermaid-erd.guess_relationships', true),
-            config('mermaid-erd.models.enabled', true) ? $this->laravel->make(ModelScanner::class)->scan() : null,
-        );
-        $diagram = (new MermaidErdRenderer)->render($builder->build());
+        $diagram = (new MermaidErdRenderer)->render(SchemaBuilder::fromConfig($service)->build());
 
         $output = $this->stringOption('output') ?? select(
             label: 'How would you like to output the diagram?',
@@ -59,7 +51,6 @@ class LaravelMermaidErdCommand extends Command
         );
 
         return match ($output) {
-            'stdout' => $this->outputToStdout($diagram),
             'file' => $this->outputToFile($diagram),
             default => $this->outputToStdout($diagram),
         };
@@ -84,8 +75,7 @@ class LaravelMermaidErdCommand extends Command
             $path = base_path($path);
         }
 
-        $writer = new FileWriter(new Filesystem);
-        $writer->write($path, $diagram);
+        (new FileWriter)->write($path, $diagram);
 
         $this->info("Diagram written to {$path}");
 

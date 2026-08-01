@@ -29,7 +29,7 @@ readonly class Schema
         $models = [];
         $pivots = [];
         foreach ($this->tables as $table) {
-            $tables[$table->name] = array_map(fn (Column $column): string => $column->name, $table->columns);
+            $tables[$table->name] = array_keys($table->columns);
             if ($table->model !== null) {
                 $models[$table->name] = class_basename($table->model);
             }

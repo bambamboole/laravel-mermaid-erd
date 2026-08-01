@@ -111,7 +111,7 @@ composer require bambamboole/laravel-mermaid-erd
 Optionally publish the config file to customize which tables are ignored:
 
 ```bash
-php artisan vendor:publish --tag="laravel-mermaid-erd-config"
+php artisan vendor:publish --tag="mermaid-erd-config"
 ```
 
 ## Usage
