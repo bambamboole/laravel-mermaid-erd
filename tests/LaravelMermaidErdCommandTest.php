@@ -258,7 +258,7 @@ it('guesses relationships for _id columns without FK constraints', function (): 
     $output = Artisan::output();
 
     expect($output)
-        ->toContain('users ||--o{ ai_messages : "guessed has many via user_id"');
+        ->toContain('users ||--o{ ai_messages : "guessed has many via user_id, no index"');
 });
 
 it('does not guess relationships when config is disabled', function (): void {

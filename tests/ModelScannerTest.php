@@ -93,10 +93,10 @@ it('renders eloquent relations with their declaring method', function (): void {
     $diagram = (new MermaidErdRenderer)->render(buildEnrichedSchema());
 
     expect($diagram)
-        ->toContain('users ||--o{ ai_messages : "hasMany via user_id"')
+        ->toContain('users ||--o{ ai_messages : "hasMany via user_id, no index"')
         ->not->toContain('ai_messages : "guessed')
         // audit_logs has no model — the heuristic guess remains.
-        ->toContain('audit_logs : "guessed has many via user_id"');
+        ->toContain('audit_logs : "guessed has many via user_id, no index"');
 });
 
 it('returns an empty scan for nonexistent paths', function (): void {

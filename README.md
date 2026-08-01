@@ -14,14 +14,42 @@ Generated from this package's own test schema:
 <!-- mermaid-erd-start -->
 ```mermaid
 ---
-title: 9 tables · 52 columns
+title: 26 tables · 169 columns
 ---
 erDiagram
+    addresses["addresses (9)"] {
+        integer id PK
+        integer customer_id FK
+        varchar type "default: 'shipping'"
+        varchar street
+        varchar city
+        varchar zip
+        varchar country
+        datetime created_at "nullable"
+        datetime updated_at "nullable"
+    }
     ai_messages["ai_messages (6) · AiMessage"] {
         integer id PK
         integer user_id
         text prompt
         text response "nullable"
+        datetime created_at "nullable"
+        datetime updated_at "nullable"
+    }
+    attachments["attachments (7) · Attachment"] {
+        integer id PK
+        varchar attachable_type "polymorphic"
+        integer attachable_id "polymorphic"
+        varchar path
+        varchar mime_type "nullable"
+        datetime created_at "nullable"
+        datetime updated_at "nullable"
+    }
+    audit_logs["audit_logs (6)"] {
+        integer id PK
+        integer user_id
+        varchar action
+        text payload "nullable"
         datetime created_at "nullable"
         datetime updated_at "nullable"
     }
@@ -40,6 +68,67 @@ erDiagram
         datetime created_at "nullable"
         datetime updated_at "nullable"
     }
+    coupon_order["coupon_order (5)"] {
+        integer id PK
+        integer coupon_id FK
+        integer order_id FK
+        datetime created_at "nullable"
+        datetime updated_at "nullable"
+    }
+    coupons["coupons (6)"] {
+        integer id PK
+        varchar code UK
+        integer discount
+        datetime valid_until "nullable"
+        datetime created_at "nullable"
+        datetime updated_at "nullable"
+    }
+    customers["customers (7) · Customer"] {
+        integer id PK
+        integer user_id FK "nullable"
+        varchar name "accessor"
+        varchar email UK
+        varchar phone "nullable"
+        datetime created_at "nullable"
+        datetime updated_at "nullable"
+    }
+    invoices["invoices (6)"] {
+        integer id PK
+        integer order_id FK, UK
+        varchar number UK
+        datetime issued_at "nullable"
+        datetime created_at "nullable"
+        datetime updated_at "nullable"
+    }
+    order_items["order_items (7)"] {
+        integer id PK
+        integer order_id FK
+        integer product_variant_id FK
+        integer quantity
+        integer unit_price
+        datetime created_at "nullable"
+        datetime updated_at "nullable"
+    }
+    orders["orders (9) · Order"] {
+        integer id PK
+        integer customer_id FK
+        varchar number UK
+        varchar status "cast: OrderStatus, default: 'pending'"
+        integer total
+        datetime placed_at "cast: immutable_datetime, nullable"
+        datetime deleted_at "soft-delete, cast: datetime, nullable"
+        datetime created_at "nullable"
+        datetime updated_at "nullable"
+    }
+    payments["payments (7)"] {
+        integer id PK
+        integer order_id FK
+        varchar method
+        integer amount
+        datetime paid_at "nullable"
+        datetime created_at "nullable"
+        datetime updated_at "nullable"
+    }
     post_tag["post_tag (5)"] {
         integer id PK
         integer post_id FK
@@ -55,6 +144,27 @@ erDiagram
         datetime created_at "nullable"
         datetime updated_at "nullable"
     }
+    product_variants["product_variants (7)"] {
+        integer id PK
+        integer product_id FK
+        varchar sku UK
+        varchar options "nullable"
+        integer price "nullable"
+        datetime created_at "nullable"
+        datetime updated_at "nullable"
+    }
+    products["products (10)"] {
+        integer id PK
+        integer supplier_id FK
+        integer category_id FK "nullable"
+        varchar name
+        varchar sku UK
+        integer price
+        text description "nullable"
+        datetime deleted_at "soft-delete, nullable"
+        datetime created_at "nullable"
+        datetime updated_at "nullable"
+    }
     reviews["reviews (8) · Review"] {
         integer id PK
         varchar reviewable_type "polymorphic"
@@ -62,6 +172,39 @@ erDiagram
         integer user_id FK
         text body
         integer rating
+        datetime created_at "nullable"
+        datetime updated_at "nullable"
+    }
+    shipment_items["shipment_items (6)"] {
+        integer id PK
+        integer shipment_id FK
+        integer order_item_id FK
+        integer quantity
+        datetime created_at "nullable"
+        datetime updated_at "nullable"
+    }
+    shipments["shipments (7)"] {
+        integer id PK
+        integer order_id FK
+        integer warehouse_id FK
+        varchar tracking_number "nullable"
+        datetime shipped_at "nullable"
+        datetime created_at "nullable"
+        datetime updated_at "nullable"
+    }
+    stocks["stocks (6)"] {
+        integer id PK
+        integer warehouse_id FK
+        integer product_variant_id FK
+        integer quantity "default: '0'"
+        datetime created_at "nullable"
+        datetime updated_at "nullable"
+    }
+    suppliers["suppliers (6)"] {
+        integer id PK
+        varchar name
+        varchar email UK
+        varchar phone "nullable"
         datetime created_at "nullable"
         datetime updated_at "nullable"
     }
@@ -87,16 +230,45 @@ erDiagram
         datetime created_at "nullable"
         datetime updated_at "nullable"
     }
-    users ||--o{ ai_messages : "hasMany via user_id"
+    warehouses["warehouses (6)"] {
+        integer id PK
+        varchar name
+        varchar code UK
+        varchar address "nullable"
+        datetime created_at "nullable"
+        datetime updated_at "nullable"
+    }
+    customers ||--o{ addresses : "has many via customer_id, cascade delete"
+    users ||--o{ ai_messages : "hasMany via user_id, no index"
+    users ||--o{ audit_logs : "guessed has many via user_id, no index"
     categories |o--o{ categories : "self-ref via parent_id, set null delete"
     users ||--o{ comments : "has many via user_id, cascade delete"
     posts ||--o{ comments : "has many via post_id, cascade delete"
+    orders ||--o{ coupon_order : "pivot, has many via order_id, cascade delete"
+    coupons ||--o{ coupon_order : "pivot, has many via coupon_id, cascade delete"
+    users |o--o{ customers : "has many via user_id, set null delete"
+    orders ||--|| invoices : "has one via order_id, cascade delete"
+    product_variants ||--o{ order_items : "has many via product_variant_id"
+    orders ||--o{ order_items : "has many via order_id, cascade delete"
+    customers ||--o{ orders : "has many via customer_id, cascade delete"
+    orders ||--o{ payments : "has many via order_id, cascade delete"
     tags ||--o{ post_tag : "pivot, has many via tag_id, cascade delete"
     posts ||--o{ post_tag : "pivot, has many via post_id, cascade delete"
     users ||--o{ posts : "has many via user_id, cascade delete"
+    products ||--o{ product_variants : "has many via product_id, cascade delete"
+    categories |o--o{ products : "has many via category_id, set null delete"
+    suppliers ||--o{ products : "has many via supplier_id, cascade delete"
     users ||--o{ reviews : "has many via user_id, cascade delete"
+    order_items ||--o{ shipment_items : "has many via order_item_id, cascade delete"
+    shipments ||--o{ shipment_items : "has many via shipment_id, cascade delete"
+    warehouses ||--o{ shipments : "has many via warehouse_id"
+    orders ||--o{ shipments : "has many via order_id, cascade delete"
+    product_variants ||--o{ stocks : "has many via product_variant_id, cascade delete"
+    warehouses ||--o{ stocks : "has many via warehouse_id, cascade delete"
     posts ||--o{ reviews : "morphMany via reviewable"
     videos ||--o{ reviews : "morphMany via reviewable"
+    posts ||--o{ attachments : "morphMany via attachable"
+    videos ||--o{ attachments : "morphMany via attachable"
 ```
 <!-- mermaid-erd-end -->
 

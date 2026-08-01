@@ -29,8 +29,9 @@ class MermaidErdRenderer
         if ($unmapped !== []) {
             $diagram .= "%% Unmapped polymorphic relations (add to config 'mermaid-erd.polymorphic_relationships'):\n";
             foreach ($unmapped as $pair) {
-                [, $morphName] = explode('.', $pair, 2);
-                $diagram .= "%%   {$pair} ({$morphName}_type + {$morphName}_id)\n";
+                [$tableName, $morphName] = explode('.', $pair, 2);
+                $noIndex = in_array($morphName, $schema->table($tableName)->unindexedMorphs ?? []) ? ', no index' : '';
+                $diagram .= "%%   {$pair} ({$morphName}_type + {$morphName}_id{$noIndex})\n";
             }
         }
 
@@ -104,21 +105,36 @@ class MermaidErdRenderer
     private function renderRelation(Relation $relation, Schema $schema): string
     {
         $parentSide = $relation->nullable ? '|o' : '||';
+        $noIndex = $relation->indexed ? '' : ', no index';
 
         return match ($relation->type) {
             RelationType::ForeignKey => $this->renderForeignKeyRelation($relation, $schema, $parentSide),
-            RelationType::Eloquent => sprintf(
-                "    %s %s--%s %s : \"%s via %s\"\n",
-                $relation->from,
-                $parentSide,
-                $relation->oneToOne ? '||' : 'o{',
-                $relation->to,
-                $relation->declaredAs,
-                $relation->columns[0],
-            ),
-            RelationType::Guessed => "    {$relation->from} {$parentSide}--o{ {$relation->to} : \"guessed has many via {$relation->columns[0]}\"\n",
-            RelationType::Morph => "    {$relation->from} ||--o{ {$relation->to} : \"morphMany via {$relation->morphName}\"\n",
+            RelationType::Eloquent => $this->renderEloquentRelation($relation, $schema, $parentSide),
+            RelationType::Guessed => "    {$relation->from} {$parentSide}--o{ {$relation->to} : \"guessed has many via {$relation->columns[0]}{$noIndex}\"\n",
+            RelationType::Morph => "    {$relation->from} ||--o{ {$relation->to} : \"morphMany via {$relation->morphName}{$noIndex}\"\n",
         };
+    }
+
+    private function renderEloquentRelation(Relation $relation, Schema $schema, string $parentSide): string
+    {
+        $label = "{$relation->declaredAs} via {$relation->columns[0]}";
+
+        $column = $schema->table($relation->to)?->columns[$relation->columns[0]] ?? null;
+        if (!$relation->indexed) {
+            $label .= ', no index';
+        } elseif ($relation->declaredAs === 'hasOne' && $column !== null && !$column->unique) {
+            // The code assumes one child row per parent; the database permits more.
+            $label .= ', no unique index';
+        }
+
+        return sprintf(
+            "    %s %s--%s %s : \"%s\"\n",
+            $relation->from,
+            $parentSide,
+            $relation->oneToOne ? '||' : 'o{',
+            $relation->to,
+            $label,
+        );
     }
 
     private function renderForeignKeyRelation(Relation $relation, Schema $schema, string $parentSide): string
@@ -134,6 +150,10 @@ class MermaidErdRenderer
 
         if ($relation->onDelete !== null) {
             $label .= ", {$relation->onDelete} delete";
+        }
+
+        if (!$relation->indexed) {
+            $label .= ', no index';
         }
 
         if ($schema->table($relation->to)?->pivot) {

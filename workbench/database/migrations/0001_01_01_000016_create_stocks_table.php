@@ -10,8 +10,8 @@ return new class extends Migration
     {
         Schema::create('stocks', function (Blueprint $table) {
             $table->id();
-            $table->foreignId('warehouse_id')->constrained('warehouses')->cascadeOnDelete();
-            $table->foreignId('product_variant_id')->constrained('product_variants')->cascadeOnDelete();
+            $table->foreignId('warehouse_id')->index()->constrained('warehouses')->cascadeOnDelete();
+            $table->foreignId('product_variant_id')->index()->constrained('product_variants')->cascadeOnDelete();
             $table->integer('quantity')->default('0');
             $table->timestamps();
         });

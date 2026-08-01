@@ -10,8 +10,8 @@ return new class extends Migration
     {
         Schema::create('products', function (Blueprint $table) {
             $table->id();
-            $table->foreignId('supplier_id')->constrained('suppliers')->cascadeOnDelete();
-            $table->foreignId('category_id')->nullable()->constrained('categories')->nullOnDelete();
+            $table->foreignId('supplier_id')->index()->constrained('suppliers')->cascadeOnDelete();
+            $table->foreignId('category_id')->nullable()->index()->constrained('categories')->nullOnDelete();
             $table->string('name');
             $table->string('sku')->unique();
             $table->integer('price');
