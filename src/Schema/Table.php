@@ -5,7 +5,7 @@ namespace Bambamboole\LaravelMermaidErd\Schema;
 readonly class Table
 {
     /**
-     * @param  Column[]  $columns
+     * @param  array<string, Column>  $columns  keyed by column name
      * @param  string[]  $morphNames  detected morph pairs, e.g. ['reviewable']
      * @param  class-string|null  $model  the Eloquent model backing this table, when discovered
      */

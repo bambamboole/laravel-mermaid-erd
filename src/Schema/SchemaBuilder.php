@@ -7,8 +7,6 @@ use Illuminate\Support\Str;
 
 /**
  * @phpstan-import-type ForeignKeyRow from DatabaseInformationService
- *
- * @phpstan-type TableMeta array{columnNames: string[], foreignKeys: list<ForeignKeyRow>, uniqueColumns: string[], nullableColumns: string[], foreignKeyColumns: string[], polymorphicColumns: string[]}
  */
 class SchemaBuilder
 {
@@ -24,17 +22,27 @@ class SchemaBuilder
         private readonly ?ModelScan $models = null,
     ) {}
 
+    public static function fromConfig(DatabaseInformationService $databaseInformationService): self
+    {
+        return new self(
+            $databaseInformationService,
+            config('mermaid-erd.polymorphic_relationships', []),
+            config('mermaid-erd.guess_relationships', true),
+            config('mermaid-erd.models.enabled', true) ? app(ModelScanner::class)->scan() : null,
+        );
+    }
+
     public function build(): Schema
     {
         $tableNames = $this->databaseInformationService->getTables();
 
         $tables = [];
-        $meta = [];
+        $foreignKeysByTable = [];
 
         foreach ($tableNames as $tableName) {
             $rawColumns = $this->databaseInformationService->getColumns($tableName);
             $indexes = $this->databaseInformationService->getIndexes($tableName);
-            $foreignKeys = $this->databaseInformationService->getForeignKeys($tableName);
+            $foreignKeys = $foreignKeysByTable[$tableName] = $this->databaseInformationService->getForeignKeys($tableName);
 
             $columnNames = array_map(fn (array $column): string => $column['name'], $rawColumns);
 
@@ -61,14 +69,10 @@ class SchemaBuilder
             $mutators = $metadata->mutators ?? [];
 
             $columns = [];
-            $nullableColumns = [];
             foreach ($rawColumns as $rawColumn) {
                 $name = $rawColumn['name'];
-                if ($rawColumn['nullable']) {
-                    $nullableColumns[] = $name;
-                }
 
-                $columns[] = new Column(
+                $columns[$name] = new Column(
                     name: $name,
                     type: $rawColumn['type_name'],
                     nullable: (bool) $rawColumn['nullable'],
@@ -91,27 +95,18 @@ class SchemaBuilder
                 morphNames: $morphNames,
                 model: $metadata?->class,
             );
-
-            $meta[$tableName] = [
-                'columnNames' => $columnNames,
-                'foreignKeys' => $foreignKeys,
-                'uniqueColumns' => $uniqueColumns,
-                'nullableColumns' => $nullableColumns,
-                'foreignKeyColumns' => $foreignKeyColumns,
-                'polymorphicColumns' => $polymorphicColumns,
-            ];
         }
 
-        return new Schema($tables, $this->buildRelations($tableNames, $tables, $meta));
+        return new Schema($tables, $this->buildRelations($tableNames, $tables, $foreignKeysByTable));
     }
 
     /**
      * @param  string[]  $tableNames
      * @param  array<string, Table>  $tables
-     * @param  array<string, TableMeta>  $meta
+     * @param  array<string, list<ForeignKeyRow>>  $foreignKeysByTable
      * @return list<Relation>
      */
-    private function buildRelations(array $tableNames, array $tables, array $meta): array
+    private function buildRelations(array $tableNames, array $tables, array $foreignKeysByTable): array
     {
         $relations = [];
 
@@ -121,7 +116,9 @@ class SchemaBuilder
         }
 
         foreach ($tableNames as $tableName) {
-            foreach ($meta[$tableName]['foreignKeys'] as $foreignKey) {
+            $columns = $tables[$tableName]->columns;
+
+            foreach ($foreignKeysByTable[$tableName] as $foreignKey) {
                 $foreignTable = $foreignKey['foreign_table'];
 
                 if (!in_array($foreignTable, $tableNames)) {
@@ -133,20 +130,20 @@ class SchemaBuilder
                     to: $tableName,
                     type: RelationType::ForeignKey,
                     columns: $foreignKey['columns'],
-                    nullable: array_intersect($foreignKey['columns'], $meta[$tableName]['nullableColumns']) !== [],
+                    nullable: array_filter($foreignKey['columns'], fn (string $name): bool => $columns[$name]->nullable) !== [],
                     oneToOne: count($foreignKey['columns']) === 1
-                        && in_array($foreignKey['columns'][0], $meta[$tableName]['uniqueColumns']),
+                        && $columns[$foreignKey['columns'][0]]->unique,
                     onDelete: $this->normalizeOnDelete($foreignKey['on_delete'] ?? null),
                 );
             }
 
             $modelCoveredColumns = [];
             foreach ($scannedByChild[$tableName] ?? [] as $scanned) {
+                $column = $columns[$scanned->column] ?? null;
+
                 // A foreign key constraint is authoritative; the model relation
                 // only fills in where the schema has none.
-                if (!in_array($scanned->from, $tableNames)
-                    || !in_array($scanned->column, $meta[$tableName]['columnNames'])
-                    || in_array($scanned->column, $meta[$tableName]['foreignKeyColumns'])) {
+                if ($column === null || $column->foreignKey || !in_array($scanned->from, $tableNames)) {
                     continue;
                 }
 
@@ -156,15 +153,14 @@ class SchemaBuilder
                     to: $tableName,
                     type: RelationType::Eloquent,
                     columns: [$scanned->column],
-                    nullable: in_array($scanned->column, $meta[$tableName]['nullableColumns']),
-                    oneToOne: $scanned->declaredAs === 'hasOne'
-                        || in_array($scanned->column, $meta[$tableName]['uniqueColumns']),
+                    nullable: $column->nullable,
+                    oneToOne: $scanned->declaredAs === 'hasOne' || $column->unique,
                     declaredAs: $scanned->declaredAs,
                 );
             }
 
             if ($this->guessRelationships) {
-                array_push($relations, ...$this->guessRelations($tableName, $tableNames, $tables, $meta, $modelCoveredColumns));
+                array_push($relations, ...$this->guessRelations($tableName, $tableNames, $tables, $modelCoveredColumns));
             }
         }
 
@@ -206,11 +202,10 @@ class SchemaBuilder
     /**
      * @param  string[]  $tableNames
      * @param  array<string, Table>  $tables
-     * @param  array<string, TableMeta>  $meta
      * @param  string[]  $modelCoveredColumns
      * @return list<Relation>
      */
-    private function guessRelations(string $tableName, array $tableNames, array $tables, array $meta, array $modelCoveredColumns = []): array
+    private function guessRelations(string $tableName, array $tableNames, array $tables, array $modelCoveredColumns = []): array
     {
         $relations = [];
 
@@ -219,12 +214,7 @@ class SchemaBuilder
                 continue;
             }
 
-            if (in_array($column->name, $meta[$tableName]['foreignKeyColumns'])
-                || in_array($column->name, $modelCoveredColumns)) {
-                continue;
-            }
-
-            if (in_array($column->name, $meta[$tableName]['polymorphicColumns'])) {
+            if ($column->foreignKey || $column->polymorphic || in_array($column->name, $modelCoveredColumns)) {
                 continue;
             }
 
