@@ -10,8 +10,8 @@ return new class extends Migration
     {
         Schema::create('shipment_items', function (Blueprint $table) {
             $table->id();
-            $table->foreignId('shipment_id')->constrained('shipments')->cascadeOnDelete();
-            $table->foreignId('order_item_id')->constrained('order_items')->cascadeOnDelete();
+            $table->foreignId('shipment_id')->index()->constrained('shipments')->cascadeOnDelete();
+            $table->foreignId('order_item_id')->index()->constrained('order_items')->cascadeOnDelete();
             $table->integer('quantity');
             $table->timestamps();
         });

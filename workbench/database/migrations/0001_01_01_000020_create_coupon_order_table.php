@@ -10,8 +10,8 @@ return new class extends Migration
     {
         Schema::create('coupon_order', function (Blueprint $table) {
             $table->id();
-            $table->foreignId('coupon_id')->constrained('coupons')->cascadeOnDelete();
-            $table->foreignId('order_id')->constrained('orders')->cascadeOnDelete();
+            $table->foreignId('coupon_id')->index()->constrained('coupons')->cascadeOnDelete();
+            $table->foreignId('order_id')->index()->constrained('orders')->cascadeOnDelete();
             $table->timestamps();
         });
     }

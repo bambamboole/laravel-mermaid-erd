@@ -38,11 +38,17 @@ class SchemaBuilder
 
         $tables = [];
         $foreignKeysByTable = [];
+        $indexesByTable = [];
 
         foreach ($tableNames as $tableName) {
             $rawColumns = $this->databaseInformationService->getColumns($tableName);
             $indexes = $this->databaseInformationService->getIndexes($tableName);
             $foreignKeys = $foreignKeysByTable[$tableName] = $this->databaseInformationService->getForeignKeys($tableName);
+
+            // Ordered column lists; expression indexes report no columns and are skipped.
+            $indexColumns = $indexesByTable[$tableName] = array_values(array_filter(
+                array_map(fn (array $index): array => $index['columns'], $indexes),
+            ));
 
             $columnNames = array_map(fn (array $column): string => $column['name'], $rawColumns);
 
@@ -93,20 +99,25 @@ class SchemaBuilder
                 columns: $columns,
                 pivot: $this->isPivot($foreignKeys, $columnNames, $foreignKeyColumns),
                 morphNames: $morphNames,
+                unindexedMorphs: array_values(array_filter(
+                    $morphNames,
+                    fn (string $morphName): bool => !$this->morphPairIndexed($indexColumns, $morphName),
+                )),
                 model: $metadata?->class,
             );
         }
 
-        return new Schema($tables, $this->buildRelations($tableNames, $tables, $foreignKeysByTable));
+        return new Schema($tables, $this->buildRelations($tableNames, $tables, $foreignKeysByTable, $indexesByTable));
     }
 
     /**
      * @param  string[]  $tableNames
      * @param  array<string, Table>  $tables
      * @param  array<string, list<ForeignKeyRow>>  $foreignKeysByTable
+     * @param  array<string, list<string[]>>  $indexesByTable
      * @return list<Relation>
      */
-    private function buildRelations(array $tableNames, array $tables, array $foreignKeysByTable): array
+    private function buildRelations(array $tableNames, array $tables, array $foreignKeysByTable, array $indexesByTable): array
     {
         $relations = [];
 
@@ -117,6 +128,7 @@ class SchemaBuilder
 
         foreach ($tableNames as $tableName) {
             $columns = $tables[$tableName]->columns;
+            $indexes = $indexesByTable[$tableName];
 
             foreach ($foreignKeysByTable[$tableName] as $foreignKey) {
                 $foreignTable = $foreignKey['foreign_table'];
@@ -134,6 +146,7 @@ class SchemaBuilder
                     oneToOne: count($foreignKey['columns']) === 1
                         && $columns[$foreignKey['columns'][0]]->unique,
                     onDelete: $this->normalizeOnDelete($foreignKey['on_delete'] ?? null),
+                    indexed: $this->hasSupportingIndex($indexes, $foreignKey['columns']),
                 );
             }
 
@@ -156,11 +169,12 @@ class SchemaBuilder
                     nullable: $column->nullable,
                     oneToOne: $scanned->declaredAs === 'hasOne' || $column->unique,
                     declaredAs: $scanned->declaredAs,
+                    indexed: $this->hasSupportingIndex($indexes, [$scanned->column]),
                 );
             }
 
             if ($this->guessRelationships) {
-                array_push($relations, ...$this->guessRelations($tableName, $tableNames, $tables, $modelCoveredColumns));
+                array_push($relations, ...$this->guessRelations($tableName, $tableNames, $tables, $indexes, $modelCoveredColumns));
             }
         }
 
@@ -176,6 +190,7 @@ class SchemaBuilder
                     to: $tableName,
                     type: RelationType::Morph,
                     morphName: $morphName,
+                    indexed: $this->morphPairIndexed($indexesByTable[$tableName], $morphName),
                 );
             }
         }
@@ -202,10 +217,11 @@ class SchemaBuilder
     /**
      * @param  string[]  $tableNames
      * @param  array<string, Table>  $tables
+     * @param  list<string[]>  $indexes
      * @param  string[]  $modelCoveredColumns
      * @return list<Relation>
      */
-    private function guessRelations(string $tableName, array $tableNames, array $tables, array $modelCoveredColumns = []): array
+    private function guessRelations(string $tableName, array $tableNames, array $tables, array $indexes, array $modelCoveredColumns = []): array
     {
         $relations = [];
 
@@ -230,10 +246,42 @@ class SchemaBuilder
                 type: RelationType::Guessed,
                 columns: [$column->name],
                 nullable: $column->nullable,
+                indexed: $this->hasSupportingIndex($indexes, [$column->name]),
             );
         }
 
         return $relations;
+    }
+
+    /**
+     * True when the leading columns of some index are exactly the given
+     * columns (any order among them) — the leftmost-prefix rule.
+     *
+     * @param  list<string[]>  $indexes  ordered column lists
+     * @param  string[]  $columns
+     */
+    private function hasSupportingIndex(array $indexes, array $columns): bool
+    {
+        foreach ($indexes as $indexColumns) {
+            if (count($indexColumns) >= count($columns)
+                && array_diff($columns, array_slice($indexColumns, 0, count($columns))) === []) {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    /**
+     * Eloquent queries morphs as `type = ? AND id = ?`: covered by an index
+     * leading with the id column or with the pair in either order.
+     *
+     * @param  list<string[]>  $indexes
+     */
+    private function morphPairIndexed(array $indexes, string $morphName): bool
+    {
+        return $this->hasSupportingIndex($indexes, ["{$morphName}_id"])
+            || $this->hasSupportingIndex($indexes, ["{$morphName}_type", "{$morphName}_id"]);
     }
 
     /**

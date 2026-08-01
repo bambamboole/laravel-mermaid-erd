@@ -1,9 +1,14 @@
 <?php declare(strict_types=1);
 
 use Bambamboole\LaravelMermaidErd\DatabaseInformationService;
+use Bambamboole\LaravelMermaidErd\MermaidErdRenderer;
+use Bambamboole\LaravelMermaidErd\Schema\ModelScan;
 use Bambamboole\LaravelMermaidErd\Schema\RelationType;
+use Bambamboole\LaravelMermaidErd\Schema\ScannedRelation;
 use Bambamboole\LaravelMermaidErd\Schema\Schema;
 use Bambamboole\LaravelMermaidErd\Schema\SchemaBuilder;
+use Illuminate\Database\Schema\Blueprint;
+use Illuminate\Support\Facades\Schema as SchemaFacade;
 
 function buildSchema(array $polymorphicRelationships = [], bool $guessRelationships = true): Schema
 {
@@ -107,6 +112,74 @@ it('builds morph relations from configured mappings', function (): void {
 
 it('reports unmapped morph pairs', function (): void {
     expect(buildSchema()->unmappedMorphs())->toBe(['attachments.attachable', 'reviews.reviewable']);
+});
+
+it('flags relation columns without a supporting index', function (): void {
+    $relations = collect(buildSchema()->relations);
+
+    $guessed = $relations->first(fn ($r): bool => $r->to === 'ai_messages');
+    $constrained = $relations->first(fn ($r): bool => $r->to === 'posts' && $r->columns === ['user_id']);
+
+    expect($guessed->indexed)->toBeFalse()
+        ->and($constrained->indexed)->toBeTrue();
+});
+
+it('accepts only indexes that lead with the relation column', function (): void {
+    SchemaFacade::create('metrics', function (Blueprint $table): void {
+        $table->id();
+        $table->unsignedBigInteger('user_id');
+        $table->unsignedBigInteger('customer_id');
+        $table->timestamp('recorded_at')->nullable();
+        $table->index(['user_id', 'recorded_at']);
+        $table->index(['recorded_at', 'customer_id']);
+    });
+
+    $relations = collect(buildSchema()->relations)
+        ->where('to', 'metrics')
+        ->keyBy(fn ($r): string => $r->columns[0]);
+
+    expect($relations['user_id']->indexed)->toBeTrue()
+        ->and($relations['customer_id']->indexed)->toBeFalse();
+
+    SchemaFacade::drop('metrics');
+});
+
+it('flags morph pairs without a supporting index', function (): void {
+    SchemaFacade::create('badges', function (Blueprint $table): void {
+        $table->id();
+        $table->string('badgeable_type');
+        $table->unsignedBigInteger('badgeable_id');
+    });
+
+    $mapped = buildSchema(polymorphicRelationships: ['badges.badgeable' => ['posts']]);
+    $morph = collect($mapped->relations)->first(fn ($r): bool => $r->to === 'badges');
+
+    expect($morph->indexed)->toBeFalse()
+        ->and($mapped->table('badges')->unindexedMorphs)->toBe(['badgeable'])
+        ->and($mapped->table('reviews')->unindexedMorphs)->toBe([])
+        ->and((new MermaidErdRenderer)->render($mapped))
+        ->toContain('posts ||--o{ badges : "morphMany via badgeable, no index"')
+        ->and((new MermaidErdRenderer)->render(buildSchema()))
+        ->toContain('%%   badges.badgeable (badgeable_type + badgeable_id, no index)');
+
+    SchemaFacade::drop('badges');
+});
+
+it('annotates hasOne relations without a unique index', function (): void {
+    SchemaFacade::create('profiles', function (Blueprint $table): void {
+        $table->id();
+        $table->unsignedBigInteger('user_id')->index();
+    });
+
+    $schema = (new SchemaBuilder(
+        new DatabaseInformationService(app('db')->connection()),
+        models: new ModelScan(relations: [new ScannedRelation('users', 'profiles', 'user_id', 'hasOne')]),
+    ))->build();
+
+    expect((new MermaidErdRenderer)->render($schema))
+        ->toContain('users ||--|| profiles : "hasOne via user_id, no unique index"');
+
+    SchemaFacade::drop('profiles');
 });
 
 it('exposes a graph representation for filtering', function (): void {

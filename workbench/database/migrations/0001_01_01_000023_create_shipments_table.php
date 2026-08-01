@@ -10,8 +10,8 @@ return new class extends Migration
     {
         Schema::create('shipments', function (Blueprint $table) {
             $table->id();
-            $table->foreignId('order_id')->constrained('orders')->cascadeOnDelete();
-            $table->foreignId('warehouse_id')->constrained('warehouses')->restrictOnDelete();
+            $table->foreignId('order_id')->index()->constrained('orders')->cascadeOnDelete();
+            $table->foreignId('warehouse_id')->index()->constrained('warehouses')->restrictOnDelete();
             $table->string('tracking_number')->nullable();
             $table->timestamp('shipped_at')->nullable();
             $table->timestamps();
