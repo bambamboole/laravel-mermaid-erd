@@ -1,5 +1,7 @@
 <?php
+
 declare(strict_types=1);
+
 namespace Bambamboole\LaravelMermaidErd\Schema;
 
 use Illuminate\Database\Eloquent\Casts\Attribute;
@@ -56,7 +58,7 @@ class ModelScanner
     private function inspect(string $class, array &$models, array &$morphs, array &$relations): void
     {
         $reflection = new \ReflectionClass($class);
-        if (!$reflection->isSubclassOf(Model::class) || !$reflection->isInstantiable()) {
+        if (! $reflection->isSubclassOf(Model::class) || ! $reflection->isInstantiable()) {
             return;
         }
 
@@ -91,7 +93,7 @@ class ModelScanner
             }
 
             $returnType = $method->getReturnType();
-            if (!$returnType instanceof \ReflectionNamedType || $returnType->isBuiltin()) {
+            if (! $returnType instanceof \ReflectionNamedType || $returnType->isBuiltin()) {
                 continue;
             }
             $typeName = $returnType->getName();

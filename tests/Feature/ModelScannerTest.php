@@ -1,4 +1,6 @@
-<?php declare(strict_types=1);
+<?php
+
+declare(strict_types=1);
 
 use Bambamboole\LaravelMermaidErd\DatabaseInformationService;
 use Bambamboole\LaravelMermaidErd\MermaidErdRenderer;
@@ -11,19 +13,22 @@ use Workbench\App\Enums\OrderStatus;
 use Workbench\App\Models\Order;
 use Workbench\App\Models\User;
 
+use function Orchestra\Testbench\package_path;
+
 function scanWorkbenchModels(): ModelScan
 {
-    return (new ModelScanner([__DIR__.'/../workbench/app/Models']))->scan();
+    return new ModelScanner([package_path('workbench/app/Models')])->scan();
 }
 
+/** @param  array<string, string[]>  $polymorphicRelationships */
 function buildEnrichedSchema(array $polymorphicRelationships = [], ?ModelScan $scan = null): Schema
 {
-    return (new SchemaBuilder(
+    return new SchemaBuilder(
         new DatabaseInformationService(app('db')->connection()),
         $polymorphicRelationships,
         true,
         $scan ?? scanWorkbenchModels(),
-    ))->build();
+    )->build();
 }
 
 it('discovers models and keys them by table', function (): void {
@@ -100,7 +105,7 @@ it('renders eloquent relations with their declaring method', function (): void {
 });
 
 it('returns an empty scan for nonexistent paths', function (): void {
-    $scan = (new ModelScanner(['/nonexistent/path']))->scan();
+    $scan = new ModelScanner(['/nonexistent/path'])->scan();
 
     expect($scan->models)->toBe([])
         ->and($scan->morphRelationships)->toBe([]);

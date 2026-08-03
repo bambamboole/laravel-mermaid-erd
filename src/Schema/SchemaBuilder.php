@@ -1,5 +1,7 @@
 <?php
+
 declare(strict_types=1);
+
 namespace Bambamboole\LaravelMermaidErd\Schema;
 
 use Bambamboole\LaravelMermaidErd\DatabaseInformationService;
@@ -101,7 +103,7 @@ class SchemaBuilder
                 morphNames: $morphNames,
                 unindexedMorphs: array_values(array_filter(
                     $morphNames,
-                    fn (string $morphName): bool => !$this->morphPairIndexed($indexColumns, $morphName),
+                    fn (string $morphName): bool => ! $this->morphPairIndexed($indexColumns, $morphName),
                 )),
                 model: $metadata?->class,
             );
@@ -133,7 +135,7 @@ class SchemaBuilder
             foreach ($foreignKeysByTable[$tableName] as $foreignKey) {
                 $foreignTable = $foreignKey['foreign_table'];
 
-                if (!in_array($foreignTable, $tableNames)) {
+                if (! in_array($foreignTable, $tableNames)) {
                     continue;
                 }
 
@@ -156,7 +158,7 @@ class SchemaBuilder
 
                 // A foreign key constraint is authoritative; the model relation
                 // only fills in where the schema has none.
-                if ($column === null || $column->foreignKey || !in_array($scanned->from, $tableNames)) {
+                if ($column === null || $column->foreignKey || ! in_array($scanned->from, $tableNames)) {
                     continue;
                 }
 
@@ -181,7 +183,7 @@ class SchemaBuilder
         foreach ($this->morphRelationships() as $key => $targetTables) {
             [$tableName, $morphName] = explode('.', $key, 2);
             foreach ($targetTables as $targetTable) {
-                if (!isset($tables[$tableName]) || !isset($tables[$targetTable])) {
+                if (! isset($tables[$tableName]) || ! isset($tables[$targetTable])) {
                     continue;
                 }
 
@@ -226,7 +228,7 @@ class SchemaBuilder
         $relations = [];
 
         foreach ($tables[$tableName]->columns as $column) {
-            if (!str_ends_with($column->name, '_id')) {
+            if (! str_ends_with($column->name, '_id')) {
                 continue;
             }
 
@@ -236,7 +238,7 @@ class SchemaBuilder
 
             $guessedTable = Str::plural(substr($column->name, 0, -3));
 
-            if (!in_array($guessedTable, $tableNames)) {
+            if (! in_array($guessedTable, $tableNames)) {
                 continue;
             }
 
@@ -262,14 +264,8 @@ class SchemaBuilder
      */
     private function hasSupportingIndex(array $indexes, array $columns): bool
     {
-        foreach ($indexes as $indexColumns) {
-            if (count($indexColumns) >= count($columns)
-                && array_diff($columns, array_slice($indexColumns, 0, count($columns))) === []) {
-                return true;
-            }
-        }
-
-        return false;
+        return array_any($indexes, fn (array $indexColumns): bool => count($indexColumns) >= count($columns)
+            && array_diff($columns, array_slice($indexColumns, 0, count($columns))) === []);
     }
 
     /**
@@ -294,7 +290,7 @@ class SchemaBuilder
         $polymorphicColumns = [];
 
         foreach ($columnNames as $name) {
-            if (!str_ends_with($name, '_type')) {
+            if (! str_ends_with($name, '_type')) {
                 continue;
             }
 

@@ -1,4 +1,6 @@
-<?php declare(strict_types=1);
+<?php
+
+declare(strict_types=1);
 
 use Bambamboole\LaravelMermaidErd\DatabaseInformationService;
 use Bambamboole\LaravelMermaidErd\MermaidErdRenderer;
@@ -10,13 +12,14 @@ use Bambamboole\LaravelMermaidErd\Schema\SchemaBuilder;
 use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Support\Facades\Schema as SchemaFacade;
 
+/** @param  array<string, string[]>  $polymorphicRelationships */
 function buildSchema(array $polymorphicRelationships = [], bool $guessRelationships = true): Schema
 {
-    return (new SchemaBuilder(
+    return new SchemaBuilder(
         new DatabaseInformationService(app('db')->connection()),
         $polymorphicRelationships,
         $guessRelationships,
-    ))->build();
+    )->build();
 }
 
 it('builds tables with column facts', function (): void {
@@ -171,10 +174,10 @@ it('annotates hasOne relations without a unique index', function (): void {
         $table->unsignedBigInteger('user_id')->index();
     });
 
-    $schema = (new SchemaBuilder(
+    $schema = new SchemaBuilder(
         new DatabaseInformationService(app('db')->connection()),
         models: new ModelScan(relations: [new ScannedRelation('users', 'profiles', 'user_id', 'hasOne')]),
-    ))->build();
+    )->build();
 
     expect((new MermaidErdRenderer)->render($schema))
         ->toContain('users ||--|| profiles : "hasOne via user_id, no unique index"');

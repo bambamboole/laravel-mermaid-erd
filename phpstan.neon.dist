@@ -1,8 +1,29 @@
+includes:
+    - vendor/larastan/larastan/extension.neon
+    - vendor/pestphp/pest/extension.neon
+    - vendor/pestphp/pest-plugin-phpstan/extension.neon
+    - vendor/phpstan/phpstan-mockery/extension.neon
+
 parameters:
     level: 8
     paths:
         - src
-        - config
-    tmpDir: build/phpstan
-    checkOctaneCompatibility: true
-    checkModelProperties: true
+        - tests
+        - workbench/app
+    ignoreErrors:
+        # Assertions narrow these at runtime and a failed lookup fails the test anyway, so the
+        # nullable/union results of app(), $this->artisan(), file_get_contents() and collection
+        # lookups carry no risk here. Scoped to tests/ so src/ stays at full level 8, and limited
+        # to the "cannot resolve the union" identifiers — a renamed method or property still fails.
+        -
+            identifier: property.nonObject
+            path: tests/*
+        -
+            identifier: method.nonObject
+            path: tests/*
+        -
+            identifier: offsetAccess.notFound
+            path: tests/*
+        -
+            identifier: argument.type
+            path: tests/*

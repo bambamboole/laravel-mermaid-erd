@@ -1,4 +1,6 @@
-<?php declare(strict_types=1);
+<?php
+
+declare(strict_types=1);
 
 use Bambamboole\LaravelMermaidErd\DatabaseInformationService;
 use Illuminate\Database\Connection;
@@ -42,7 +44,7 @@ it('retrieves indexes from a real database', function (): void {
     $service = new DatabaseInformationService($this->app['db']->connection());
     $indexes = $service->getIndexes('users');
 
-    $primaryIndex = collect($indexes)->first(fn (array $index) => $index['primary']);
+    $primaryIndex = collect($indexes)->first(fn (array $index): bool => $index['primary']);
     expect($primaryIndex)->not->toBeNull();
     expect($primaryIndex['columns'])->toBe(['id']);
 });
@@ -123,7 +125,7 @@ it('passes configured schema to the container-resolved service', function (): vo
 
     $service = $this->app->make(DatabaseInformationService::class);
 
-    $schema = (new ReflectionProperty($service, 'schema'))->getValue($service);
+    $schema = new ReflectionProperty($service, 'schema')->getValue($service);
     expect($schema)->toBe('reporting_schema');
 });
 

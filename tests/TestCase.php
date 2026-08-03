@@ -1,61 +1,68 @@
-<?php declare(strict_types=1);
+<?php
+
+declare(strict_types=1);
+
 namespace Bambamboole\LaravelMermaidErd\Tests;
 
 use Bambamboole\LaravelMermaidErd\LaravelMermaidErdServiceProvider;
 use Orchestra\Testbench\TestCase as Orchestra;
 
-class TestCase extends Orchestra
+use function Orchestra\Testbench\package_path;
+
+abstract class TestCase extends Orchestra
 {
-    protected function getPackageProviders($app)
+    protected function getPackageProviders($app): array
     {
-        return [
-            LaravelMermaidErdServiceProvider::class,
-        ];
+        return [LaravelMermaidErdServiceProvider::class];
     }
 
+    /**
+     * CI runs the whole suite against MySQL and Postgres as well, so the connection the
+     * workbench migrations run on comes from the environment instead of being pinned.
+     * Read through getenv() rather than env(): phpunit.xml.dist populates the real
+     * process environment, and there is no .env file in a package repository.
+     */
     public function getEnvironmentSetUp($app): void
     {
-        $app['config']->set('app.key', 'base64:'.base64_encode(random_bytes(32)));
-        $app['config']->set('cache.default', 'array');
+        $connection = $this->envOr('DB_CONNECTION', 'sqlite');
 
-        $connection = env('DB_CONNECTION', 'testing');
-        config()->set('database.default', $connection);
+        config([
+            'database.default' => $connection,
+            "database.connections.{$connection}" => match ($connection) {
+                'mysql' => [
+                    'driver' => 'mysql',
+                    'host' => $this->envOr('DB_HOST', '127.0.0.1'),
+                    'port' => $this->envOr('DB_PORT', '3306'),
+                    'database' => $this->envOr('DB_DATABASE', 'testing'),
+                    'username' => $this->envOr('DB_USERNAME', 'root'),
+                    'password' => $this->envOr('DB_PASSWORD', ''),
+                ],
+                'pgsql' => [
+                    'driver' => 'pgsql',
+                    'host' => $this->envOr('DB_HOST', '127.0.0.1'),
+                    'port' => $this->envOr('DB_PORT', '5432'),
+                    'database' => $this->envOr('DB_DATABASE', 'testing'),
+                    'username' => $this->envOr('DB_USERNAME', 'postgres'),
+                    'password' => $this->envOr('DB_PASSWORD', ''),
+                ],
+                default => [
+                    'driver' => 'sqlite',
+                    'database' => $this->envOr('DB_DATABASE', ':memory:'),
+                    'prefix' => '',
+                ],
+            },
+        ]);
+    }
 
-        if ($connection === 'testing') {
-            config()->set('database.connections.testing', [
-                'driver' => 'sqlite',
-                'database' => ':memory:',
-                'prefix' => '',
-            ]);
-        } elseif ($connection === 'mysql') {
-            config()->set('database.connections.mysql', [
-                'driver' => 'mysql',
-                'host' => env('DB_HOST', '127.0.0.1'),
-                'port' => env('DB_PORT', '3306'),
-                'database' => env('DB_DATABASE', 'testing'),
-                'username' => env('DB_USERNAME', 'root'),
-                'password' => env('DB_PASSWORD', ''),
-            ]);
-        } elseif ($connection === 'pgsql') {
-            config()->set('database.connections.pgsql', [
-                'driver' => 'pgsql',
-                'host' => env('DB_HOST', '127.0.0.1'),
-                'port' => env('DB_PORT', '5432'),
-                'database' => env('DB_DATABASE', 'testing'),
-                'username' => env('DB_USERNAME', 'postgres'),
-                'password' => env('DB_PASSWORD', ''),
-            ]);
-        } elseif ($connection === 'sqlite') {
-            config()->set('database.connections.sqlite', [
-                'driver' => 'sqlite',
-                'database' => env('DB_DATABASE', ':memory:'),
-                'prefix' => '',
-            ]);
-        }
+    private function envOr(string $key, string $default): string
+    {
+        $value = getenv($key);
+
+        return $value === false || $value === '' ? $default : $value;
     }
 
     protected function defineDatabaseMigrations(): void
     {
-        $this->loadMigrationsFrom(__DIR__.'/../workbench/database/migrations');
+        $this->loadMigrationsFrom(package_path('workbench/database/migrations'));
     }
 }
