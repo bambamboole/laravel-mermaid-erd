@@ -1,5 +1,7 @@
 <?php
+
 declare(strict_types=1);
+
 namespace Bambamboole\LaravelMermaidErd;
 
 use Illuminate\Database\Connection;
@@ -36,7 +38,7 @@ class DatabaseInformationService
             return array_values(array_filter($tableNames, fn (string $tableName): bool => in_array($tableName, $this->onlyTables)));
         }
 
-        return array_values(array_filter($tableNames, fn (string $tableName): bool => !in_array($tableName, $this->ignoreTables)));
+        return array_values(array_filter($tableNames, fn (string $tableName): bool => ! in_array($tableName, $this->ignoreTables)));
     }
 
     /**

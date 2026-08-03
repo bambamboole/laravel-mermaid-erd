@@ -1,5 +1,7 @@
 <?php
+
 declare(strict_types=1);
+
 namespace Bambamboole\LaravelMermaidErd;
 
 use Bambamboole\LaravelMermaidErd\Commands\LaravelMermaidErdCommand;

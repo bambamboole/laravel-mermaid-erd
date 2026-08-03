@@ -1,5 +1,7 @@
 <?php
+
 declare(strict_types=1);
+
 namespace Bambamboole\LaravelMermaidErd;
 
 class FileWriter
@@ -18,7 +20,7 @@ class FileWriter
 
         $mermaidBlock = self::START_TAG."\n```mermaid\n{$diagram}```\n".self::END_TAG;
 
-        if (!file_exists($path)) {
+        if (! file_exists($path)) {
             file_put_contents($path, "## ERD\n\n{$mermaidBlock}\n");
 
             return;

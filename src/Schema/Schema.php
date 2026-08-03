@@ -1,5 +1,7 @@
 <?php
+
 declare(strict_types=1);
+
 namespace Bambamboole\LaravelMermaidErd\Schema;
 
 readonly class Schema
@@ -70,7 +72,7 @@ readonly class Schema
         foreach ($this->tables as $table) {
             foreach ($table->morphNames as $morphName) {
                 $pair = "{$table->name}.{$morphName}";
-                if (!isset($mapped[$pair])) {
+                if (! isset($mapped[$pair])) {
                     $unmapped[] = $pair;
                 }
             }

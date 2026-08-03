@@ -1,5 +1,7 @@
 <?php
+
 declare(strict_types=1);
+
 namespace Bambamboole\LaravelMermaidErd;
 
 use Bambamboole\LaravelMermaidErd\Schema\Column;
@@ -65,7 +67,7 @@ class MermaidErdRenderer
         if ($column->foreignKey) {
             $constraints[] = 'FK';
         }
-        if ($column->unique && !$column->primaryKey) {
+        if ($column->unique && ! $column->primaryKey) {
             $constraints[] = 'UK';
         }
         if ($constraints !== []) {
@@ -120,9 +122,9 @@ class MermaidErdRenderer
         $label = "{$relation->declaredAs} via {$relation->columns[0]}";
 
         $column = $schema->table($relation->to)?->columns[$relation->columns[0]] ?? null;
-        if (!$relation->indexed) {
+        if (! $relation->indexed) {
             $label .= ', no index';
-        } elseif ($relation->declaredAs === 'hasOne' && $column !== null && !$column->unique) {
+        } elseif ($relation->declaredAs === 'hasOne' && $column !== null && ! $column->unique) {
             // The code assumes one child row per parent; the database permits more.
             $label .= ', no unique index';
         }
@@ -152,7 +154,7 @@ class MermaidErdRenderer
             $label .= ", {$relation->onDelete} delete";
         }
 
-        if (!$relation->indexed) {
+        if (! $relation->indexed) {
             $label .= ', no index';
         }
 

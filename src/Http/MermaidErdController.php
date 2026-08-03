@@ -1,6 +1,7 @@
 <?php
 
 declare(strict_types=1);
+
 namespace Bambamboole\LaravelMermaidErd\Http;
 
 use Bambamboole\LaravelMermaidErd\MermaidErdRenderer;

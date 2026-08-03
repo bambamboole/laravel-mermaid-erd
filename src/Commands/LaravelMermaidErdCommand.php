@@ -1,5 +1,7 @@
 <?php
+
 declare(strict_types=1);
+
 namespace Bambamboole\LaravelMermaidErd\Commands;
 
 use Bambamboole\LaravelMermaidErd\DatabaseInformationService;
@@ -71,7 +73,7 @@ class LaravelMermaidErdCommand extends Command
             required: true,
         );
 
-        if (!str_starts_with($path, '/')) {
+        if (! str_starts_with($path, '/')) {
             $path = base_path($path);
         }
 
