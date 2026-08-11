@@ -344,9 +344,33 @@
             return value.replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
         }
 
-        function openTableModal(table) {
-            const columns = graph.tables[table] || [];
+        // Each column field (type/name/keys/comment) is its own <g class="label
+        // ...">; reading them back out of the rendered entity — rather than
+        // adding a parallel data payload — keeps the modal in lockstep with
+        // whatever MermaidErdRenderer put in the box, accessors/casts included.
+        function fieldTexts(nodeEl, className) {
+            return Array.from(nodeEl.querySelectorAll('.label.' + className)).map(function(g) {
+                const p = g.querySelector('p');
+                return p ? p.textContent : '';
+            });
+        }
+
+        function openTableModal(table, nodeEl) {
             const modelClass = graph.modelClasses[table];
+
+            const types = fieldTexts(nodeEl, 'attribute-type');
+            const names = fieldTexts(nodeEl, 'attribute-name');
+            const keys = fieldTexts(nodeEl, 'attribute-keys');
+            const comments = fieldTexts(nodeEl, 'attribute-comment');
+            const columns = names.map((name, i) => ({ name: name, type: types[i], notes: [keys[i], comments[i]].filter(Boolean).join(', ') }));
+
+            const relations = parsed.edges
+                .filter(e => e.from === table || e.to === table)
+                .map(e => {
+                    const label = (e.line.match(/: "(.*)"$/) || [])[1] || '';
+                    const other = e.from === table ? e.to : e.from;
+                    return { other: other, label: label };
+                });
 
             modalTitle.textContent = table;
             modalBody.innerHTML = `
@@ -358,9 +382,24 @@
                     <dt class="font-medium text-gray-500">Pivot table</dt>
                     <dd class="text-gray-800">${pivots.has(table) ? 'Yes' : 'No'}</dd>
                 </dl>
-                <ul class="mt-3 max-h-64 divide-y divide-gray-100 overflow-y-auto text-xs">
-                    ${columns.map(c => `<li class="py-1 text-gray-700">${escapeHtml(c)}</li>`).join('')}
+                <ul class="mt-3 max-h-48 divide-y divide-gray-100 overflow-y-auto text-xs">
+                    ${columns.map(c => `
+                        <li class="flex items-baseline justify-between gap-3 py-1">
+                            <span class="text-gray-800">${escapeHtml(c.name)} <span class="text-gray-400">${escapeHtml(c.type)}</span></span>
+                            <span class="shrink-0 text-right text-gray-500">${escapeHtml(c.notes)}</span>
+                        </li>
+                    `).join('')}
                 </ul>
+                ${relations.length ? `
+                    <h3 class="mt-3 text-xs font-medium text-gray-500">Relations</h3>
+                    <ul class="mt-1 max-h-32 divide-y divide-gray-100 overflow-y-auto text-xs">
+                        ${relations.map(r => `
+                            <li class="py-1 text-gray-700">
+                                <span class="font-medium">${escapeHtml(r.other)}</span> — ${escapeHtml(r.label)}
+                            </li>
+                        `).join('')}
+                    </ul>
+                ` : ''}
             `;
             modal.classList.remove('hidden');
             modal.classList.add('flex');
@@ -377,7 +416,7 @@
             if (!nodeEl) return;
             const match = nodeEl.id.match(/-entity-(.+)-\d+$/);
             if (!match) return;
-            openTableModal(match[1]);
+            openTableModal(match[1], nodeEl);
         });
 
         document.getElementById('table-modal-close').addEventListener('click', closeTableModal);
