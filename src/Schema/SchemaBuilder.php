@@ -99,7 +99,7 @@ class SchemaBuilder
             $tables[$tableName] = new Table(
                 name: $tableName,
                 columns: $columns,
-                pivot: $this->isPivot($foreignKeys, $columnNames, $foreignKeyColumns),
+                pivot: $this->isPivot($columnNames, $foreignKeyColumns, $tableNames),
                 morphNames: $morphNames,
                 unindexedMorphs: array_values(array_filter(
                     $morphNames,
@@ -308,17 +308,27 @@ class SchemaBuilder
     }
 
     /**
-     * @param  list<ForeignKeyRow>  $foreignKeys
+     * A table is a pivot when exactly two of its columns point at another
+     * table — via a real foreign key or, absent one, the same `{table}_id`
+     * naming convention {@see guessRelations()} uses — and nothing else but
+     * id/timestamps is left over.
+     *
      * @param  string[]  $columnNames
      * @param  string[]  $foreignKeyColumns
+     * @param  string[]  $tableNames
      */
-    private function isPivot(array $foreignKeys, array $columnNames, array $foreignKeyColumns): bool
+    private function isPivot(array $columnNames, array $foreignKeyColumns, array $tableNames): bool
     {
-        if (count($foreignKeys) !== 2) {
-            return false;
-        }
+        $relationColumns = array_unique([
+            ...$foreignKeyColumns,
+            ...array_filter(
+                $columnNames,
+                fn (string $name): bool => str_ends_with($name, '_id') && in_array(Str::plural(substr($name, 0, -3)), $tableNames),
+            ),
+        ]);
 
-        return array_diff(array_diff($columnNames, $foreignKeyColumns), self::PIVOT_EXTRA_COLUMNS) === [];
+        return count($relationColumns) === 2
+            && array_diff($columnNames, $relationColumns, self::PIVOT_EXTRA_COLUMNS) === [];
     }
 
     private function normalizeOnDelete(?string $onDelete): ?string
