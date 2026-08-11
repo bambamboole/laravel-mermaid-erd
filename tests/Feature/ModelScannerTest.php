@@ -160,5 +160,7 @@ it('includes model names in the graph payload', function (): void {
     $graph = buildEnrichedSchema()->toGraph();
 
     expect($graph['models']['orders'])->toBe('Order')
-        ->and($graph['models'])->not->toHaveKey('post_tag');
+        ->and($graph['models'])->not->toHaveKey('post_tag')
+        ->and($graph['modelClasses']['orders'])->toBe(Order::class)
+        ->and($graph['modelClasses'])->not->toHaveKey('post_tag');
 });

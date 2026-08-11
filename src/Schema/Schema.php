@@ -23,17 +23,19 @@ readonly class Schema
     /**
      * Lightweight graph representation for client-side filtering.
      *
-     * @return array{tables: array<string, string[]>, models: array<string, string>, pivots: string[], edges: array<int, array{0: string, 1: string}>}
+     * @return array{tables: array<string, string[]>, models: array<string, string>, modelClasses: array<string, string>, pivots: string[], edges: array<int, array{0: string, 1: string}>}
      */
     public function toGraph(): array
     {
         $tables = [];
         $models = [];
+        $modelClasses = [];
         $pivots = [];
         foreach ($this->tables as $table) {
             $tables[$table->name] = array_keys($table->columns);
             if ($table->model !== null) {
                 $models[$table->name] = class_basename($table->model);
+                $modelClasses[$table->name] = $table->model;
             }
             if ($table->pivot) {
                 $pivots[] = $table->name;
@@ -51,7 +53,7 @@ readonly class Schema
             $edges[] = [$relation->from, $relation->to];
         }
 
-        return ['tables' => $tables, 'models' => $models, 'pivots' => $pivots, 'edges' => $edges];
+        return ['tables' => $tables, 'models' => $models, 'modelClasses' => $modelClasses, 'pivots' => $pivots, 'edges' => $edges];
     }
 
     /**

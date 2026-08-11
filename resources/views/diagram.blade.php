@@ -16,25 +16,31 @@
             <span id="erd-count" class="shrink-0 text-xs text-gray-500"></span>
         </div>
         <div class="flex shrink-0 items-center gap-2">
-            <button onclick="zoomOut()" title="Zoom out"
+            <select id="erd-layout" title="Layout engine"
+                class="rounded-md border border-gray-200 bg-white px-2 py-1.5 text-xs text-gray-600 outline-none transition hover:border-gray-300 cursor-pointer">
+                <option value="dagre">Layout: Dagre</option>
+                <option value="elk">Layout: ELK</option>
+            </select>
+            <div class="mx-1 h-5 w-px bg-gray-200"></div>
+            <button id="zoom-out-btn" title="Zoom out"
                 class="rounded-md border border-gray-200 bg-white px-3 py-1.5 text-xs text-gray-600 transition hover:border-gray-300 hover:bg-gray-50 cursor-pointer">
                 &minus;
             </button>
             <span id="zoom-level" class="min-w-[48px] text-center text-xs text-gray-500">100%</span>
-            <button onclick="zoomIn()" title="Zoom in"
+            <button id="zoom-in-btn" title="Zoom in"
                 class="rounded-md border border-gray-200 bg-white px-3 py-1.5 text-xs text-gray-600 transition hover:border-gray-300 hover:bg-gray-50 cursor-pointer">
                 +
             </button>
-            <button onclick="resetView()" title="Reset view"
+            <button id="reset-view-btn" title="Reset view"
                 class="rounded-md border border-gray-200 bg-white px-3 py-1.5 text-xs text-gray-600 transition hover:border-gray-300 hover:bg-gray-50 cursor-pointer">
                 Reset
             </button>
             <div class="mx-1 h-5 w-px bg-gray-200"></div>
-            <button onclick="copyMermaid()" id="copy-btn" title="Copy Mermaid source"
+            <button id="copy-btn" title="Copy Mermaid source"
                 class="rounded-md border border-gray-200 bg-white px-3 py-1.5 text-xs text-gray-600 transition hover:border-gray-300 hover:bg-gray-50 cursor-pointer">
                 Copy Mermaid
             </button>
-            <button onclick="downloadSVG()" title="Download SVG"
+            <button id="download-svg-btn" title="Download SVG"
                 class="rounded-md border border-gray-200 bg-white px-3 py-1.5 text-xs text-gray-600 transition hover:border-gray-300 hover:bg-gray-50 cursor-pointer">
                 Download SVG
             </button>
@@ -45,19 +51,40 @@
         <div id="diagram-wrapper" class="inline-block min-h-full min-w-full origin-top-left p-8"></div>
     </div>
 
+    <div id="table-modal" class="fixed inset-0 z-10 hidden items-center justify-center bg-black/30 p-4">
+        <div class="max-h-[80vh] w-full max-w-md overflow-y-auto rounded-lg bg-white p-5 shadow-xl">
+            <div class="mb-3 flex items-center justify-between gap-4">
+                <h2 id="table-modal-title" class="truncate text-sm font-semibold text-gray-800"></h2>
+                <button id="table-modal-close" title="Close"
+                    class="shrink-0 rounded-md px-2 py-1 text-gray-400 transition hover:bg-gray-100 hover:text-gray-600 cursor-pointer">
+                    &times;
+                </button>
+            </div>
+            <div id="table-modal-body"></div>
+        </div>
+    </div>
+
     <script>
         const mermaidSource = {!! $diagram !!};
         const graph = {!! $graph !!};
+        const baseMermaidConfig = {!! $mermaidConfig !!};
     </script>
-    <script src="https://cdn.jsdelivr.net/npm/mermaid/dist/mermaid.min.js"></script>
-    <script>
-        mermaid.initialize(Object.assign({}, {!! $mermaidConfig !!}, { startOnLoad: false }));
+    <script type="module">
+        import mermaid from 'https://cdn.jsdelivr.net/npm/mermaid/dist/mermaid.esm.min.mjs';
+        import elkLayouts from 'https://cdn.jsdelivr.net/npm/@mermaid-js/layout-elk/dist/mermaid-layout-elk.esm.min.mjs';
+
+        mermaid.registerLayoutLoaders(elkLayouts);
+
+        let currentLayout = new URL(location).searchParams.get('layout') === 'elk' ? 'elk' : 'dagre';
+        mermaid.initialize(Object.assign({}, baseMermaidConfig, { startOnLoad: false, layout: currentLayout }));
 
         let scale = 1;
         let translateX = 0;
         let translateY = 0;
         let isDragging = false;
+        let dragged = false;
         let startX, startY;
+        let mouseDownClientX, mouseDownClientY;
 
         const container = document.getElementById('diagram-container');
         const wrapper = document.getElementById('diagram-wrapper');
@@ -97,6 +124,9 @@
 
         container.addEventListener('mousedown', function(e) {
             isDragging = true;
+            dragged = false;
+            mouseDownClientX = e.clientX;
+            mouseDownClientY = e.clientY;
             startX = e.clientX - translateX;
             startY = e.clientY - translateY;
             container.classList.remove('cursor-grab');
@@ -105,6 +135,11 @@
 
         window.addEventListener('mousemove', function(e) {
             if (!isDragging) return;
+            // A few pixels of jitter shouldn't turn a click-to-open into a
+            // suppressed drag; only real panning should block the click.
+            if (Math.abs(e.clientX - mouseDownClientX) > 4 || Math.abs(e.clientY - mouseDownClientY) > 4) {
+                dragged = true;
+            }
             translateX = e.clientX - startX;
             translateY = e.clientY - startY;
             applyTransform();
@@ -140,6 +175,23 @@
             document.body.removeChild(a);
             URL.revokeObjectURL(url);
         }
+
+        document.getElementById('zoom-out-btn').addEventListener('click', zoomOut);
+        document.getElementById('zoom-in-btn').addEventListener('click', zoomIn);
+        document.getElementById('reset-view-btn').addEventListener('click', resetView);
+        document.getElementById('copy-btn').addEventListener('click', copyMermaid);
+        document.getElementById('download-svg-btn').addEventListener('click', downloadSVG);
+
+        const layoutSelect = document.getElementById('erd-layout');
+        layoutSelect.value = currentLayout;
+        layoutSelect.addEventListener('change', function() {
+            currentLayout = layoutSelect.value;
+            const url = new URL(location);
+            url.searchParams.set('layout', currentLayout);
+            history.replaceState(null, '', url);
+            mermaid.initialize(Object.assign({}, baseMermaidConfig, { startOnLoad: false, layout: currentLayout }));
+            renderDiagram();
+        });
 
         // --- Filtering ---------------------------------------------------------
         // The mermaid source is split once into entity blocks and relation lines
@@ -219,9 +271,25 @@
             try {
                 const { svg } = await mermaid.render('erd-render-' + (++renderSeq), currentSource);
                 wrapper.innerHTML = svg;
+                applyHighlights(searchInput.value);
             } catch (e) {
                 wrapper.innerHTML = '<pre class="p-8 text-xs text-red-600">' + e.message + '</pre>';
             }
+        }
+
+        // Mermaid renders each field (table title, column type/name/keys/comment)
+        // as its own <p> inside a foreignObject; highlighting the matches is just
+        // flagging the ones whose text contains the query.
+        function applyHighlights(query) {
+            const q = query.trim().toLowerCase();
+            if (!q) return;
+            const svg = wrapper.querySelector('svg');
+            if (!svg) return;
+            svg.querySelectorAll('g.node .label p').forEach(function(p) {
+                if (p.textContent.toLowerCase().includes(q)) {
+                    p.parentElement.classList.add('erd-hl');
+                }
+            });
         }
 
         const searchInput = document.getElementById('erd-search');
@@ -262,10 +330,69 @@
 
         searchInput.value = new URL(location).searchParams.get('q') || '';
         applyFilter(searchInput.value);
+
+        // --- Table detail modal -------------------------------------------------
+        // Mermaid gives each entity's rendered <g> an id of
+        // "<renderId>-entity-<table>-<n>"; that's the only place the table name
+        // survives into the DOM, so clicks are resolved by parsing it back out.
+
+        const modal = document.getElementById('table-modal');
+        const modalTitle = document.getElementById('table-modal-title');
+        const modalBody = document.getElementById('table-modal-body');
+
+        function escapeHtml(value) {
+            return value.replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+        }
+
+        function openTableModal(table) {
+            const columns = graph.tables[table] || [];
+            const modelClass = graph.modelClasses[table];
+
+            modalTitle.textContent = table;
+            modalBody.innerHTML = `
+                <dl class="grid grid-cols-[auto,1fr] gap-x-3 gap-y-1 text-xs">
+                    <dt class="font-medium text-gray-500">Model</dt>
+                    <dd class="text-gray-800">${modelClass ? escapeHtml(modelClass) : '—'}</dd>
+                    <dt class="font-medium text-gray-500">Columns</dt>
+                    <dd class="text-gray-800">${columns.length}</dd>
+                    <dt class="font-medium text-gray-500">Pivot table</dt>
+                    <dd class="text-gray-800">${pivots.has(table) ? 'Yes' : 'No'}</dd>
+                </dl>
+                <ul class="mt-3 max-h-64 divide-y divide-gray-100 overflow-y-auto text-xs">
+                    ${columns.map(c => `<li class="py-1 text-gray-700">${escapeHtml(c)}</li>`).join('')}
+                </ul>
+            `;
+            modal.classList.remove('hidden');
+            modal.classList.add('flex');
+        }
+
+        function closeTableModal() {
+            modal.classList.add('hidden');
+            modal.classList.remove('flex');
+        }
+
+        wrapper.addEventListener('click', function(e) {
+            if (dragged) return;
+            const nodeEl = e.target.closest('g.node[id]');
+            if (!nodeEl) return;
+            const match = nodeEl.id.match(/-entity-(.+)-\d+$/);
+            if (!match) return;
+            openTableModal(match[1]);
+        });
+
+        document.getElementById('table-modal-close').addEventListener('click', closeTableModal);
+        modal.addEventListener('click', function(e) {
+            if (e.target === modal) closeTableModal();
+        });
+        window.addEventListener('keydown', function(e) {
+            if (e.key === 'Escape') closeTableModal();
+        });
     </script>
 
     <style>
         #diagram-wrapper svg { display: block; max-width: none !important; }
+        #diagram-wrapper svg g.node { cursor: pointer; }
+        #diagram-wrapper svg .erd-hl { background-color: rgba(245, 158, 11, 0.35); border-radius: 3px; }
     </style>
 </body>
 </html>

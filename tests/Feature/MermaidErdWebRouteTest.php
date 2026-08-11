@@ -24,7 +24,7 @@ it('contains required html structure', function (): void {
 
     $response->assertOk();
     $response->assertSee('<!DOCTYPE html>', false);
-    $response->assertSee('mermaid.min.js', false);
+    $response->assertSee('mermaid.esm.min.mjs', false);
     $response->assertSee('id="diagram-wrapper"', false);
     $response->assertSee('tailwindcss', false);
 });
@@ -108,4 +108,22 @@ it('contains copy and download buttons', function (): void {
     $response->assertOk();
     $response->assertSee('copyMermaid()', false);
     $response->assertSee('downloadSVG()', false);
+});
+
+it('contains the layout engine switch and elk loader', function (): void {
+    $response = $this->get('/mermaid-erd');
+
+    $response->assertOk();
+    $response->assertSee('id="erd-layout"', false);
+    $response->assertSee('registerLayoutLoaders', false);
+    $response->assertSee('@mermaid-js/layout-elk', false);
+});
+
+it('contains the table detail modal and model classes in the graph payload', function (): void {
+    $response = $this->get('/mermaid-erd');
+
+    $response->assertOk();
+    $response->assertSee('id="table-modal"', false);
+    $response->assertSee('openTableModal', false);
+    $response->assertSee('"modelClasses":', false);
 });
