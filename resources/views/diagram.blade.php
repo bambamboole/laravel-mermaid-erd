@@ -51,18 +51,20 @@
         <div id="diagram-wrapper" class="inline-block min-h-full min-w-full origin-top-left p-8"></div>
     </div>
 
-    <div id="table-modal" class="fixed inset-0 z-10 hidden items-center justify-center bg-black/30 p-4">
-        <div class="max-h-[80vh] w-full max-w-md overflow-y-auto rounded-lg bg-white p-5 shadow-xl">
-            <div class="mb-3 flex items-center justify-between gap-4">
-                <h2 id="table-modal-title" class="truncate text-sm font-semibold text-gray-800"></h2>
-                <button id="table-modal-close" title="Close"
-                    class="shrink-0 rounded-md px-2 py-1 text-gray-400 transition hover:bg-gray-100 hover:text-gray-600 cursor-pointer">
-                    &times;
-                </button>
+    <aside id="table-sidebar"
+        class="fixed bottom-0 right-0 top-[49px] z-10 hidden w-96 max-w-full overflow-y-auto border-l border-gray-200 bg-white shadow-lg">
+        <div class="sticky top-0 flex items-start justify-between gap-3 border-b border-gray-100 bg-white px-4 py-3">
+            <div class="min-w-0">
+                <h2 id="sidebar-title" class="truncate text-sm font-semibold text-gray-800"></h2>
+                <div id="sidebar-badges" class="mt-1 flex flex-wrap gap-1"></div>
             </div>
-            <div id="table-modal-body"></div>
+            <button id="sidebar-close" title="Close (Esc)"
+                class="shrink-0 rounded-md px-2 py-1 text-gray-400 transition hover:bg-gray-100 hover:text-gray-600 cursor-pointer">
+                &times;
+            </button>
         </div>
-    </div>
+        <div id="sidebar-body" class="px-4 py-3"></div>
+    </aside>
 
     <script>
         const mermaidSource = {!! $diagram !!};
@@ -274,6 +276,7 @@
                 const { svg } = await mermaid.render('erd-render-' + (++renderSeq), currentSource);
                 wrapper.innerHTML = svg;
                 applyHighlights(searchInput.value);
+                applySelection();
             } catch (e) {
                 wrapper.innerHTML = '<pre class="p-8 text-xs text-red-600">' + e.message + '</pre>';
             }
@@ -333,83 +336,148 @@
         searchInput.value = new URL(location).searchParams.get('q') || '';
         applyFilter(searchInput.value);
 
-        // --- Table detail modal -------------------------------------------------
+        // --- Table detail sidebar ------------------------------------------------
         // Mermaid gives each entity's rendered <g> an id of
         // "<renderId>-entity-<table>-<n>"; that's the only place the table name
         // survives into the DOM, so clicks are resolved by parsing it back out.
+        // The sidebar content itself comes from the structured graph payload
+        // (graph.details / graph.relations), not from the rendered SVG.
 
-        const modal = document.getElementById('table-modal');
-        const modalTitle = document.getElementById('table-modal-title');
-        const modalBody = document.getElementById('table-modal-body');
+        const sidebar = document.getElementById('table-sidebar');
+        const sidebarTitle = document.getElementById('sidebar-title');
+        const sidebarBadges = document.getElementById('sidebar-badges');
+        const sidebarBody = document.getElementById('sidebar-body');
+
+        let selectedTable = null;
 
         function escapeHtml(value) {
             return value.replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
         }
 
-        // Each column field (type/name/keys/comment) is its own <g class="label
-        // ...">; reading them back out of the rendered entity — rather than
-        // adding a parallel data payload — keeps the modal in lockstep with
-        // whatever MermaidErdRenderer put in the box, accessors/casts included.
-        function fieldTexts(nodeEl, className) {
-            return Array.from(nodeEl.querySelectorAll('.label.' + className)).map(function(g) {
-                const p = g.querySelector('p');
-                return p ? p.textContent : '';
+        function chip(text, classes) {
+            return '<span class="rounded px-1.5 py-0.5 text-[10px] font-medium ' + classes + '">' + escapeHtml(text) + '</span>';
+        }
+
+        const TYPE_BADGES = {
+            fk: ['FK', 'bg-blue-100 text-blue-700'],
+            eloquent: ['Eloquent', 'bg-emerald-100 text-emerald-700'],
+            guessed: ['Guessed', 'bg-gray-100 text-gray-600'],
+            morph: ['Morph', 'bg-purple-100 text-purple-700'],
+        };
+
+        function applySelection() {
+            const svg = wrapper.querySelector('svg');
+            if (!svg) return;
+            svg.querySelectorAll('g.node.erd-selected').forEach(n => n.classList.remove('erd-selected'));
+            if (!selectedTable) return;
+            svg.querySelectorAll('g.node[id]').forEach(function(node) {
+                const match = node.id.match(/-entity-(.+)-\d+$/);
+                if (match && match[1] === selectedTable) node.classList.add('erd-selected');
             });
         }
 
-        function openTableModal(table, nodeEl) {
-            const modelClass = graph.modelClasses[table];
+        function columnRow(c) {
+            const chips = [];
+            if (c.pk) chips.push(chip('PK', 'bg-indigo-100 text-indigo-700'));
+            if (c.fk) chips.push(chip('FK', 'bg-blue-100 text-blue-700'));
+            if (c.uk && !c.pk) chips.push(chip('UK', 'bg-teal-100 text-teal-700'));
+            if (c.nullable) chips.push(chip('nullable', 'bg-gray-100 text-gray-500'));
+            if (c.softDelete) chips.push(chip('soft-delete', 'bg-orange-100 text-orange-700'));
+            if (c.poly) chips.push(chip('polymorphic', 'bg-purple-100 text-purple-700'));
+            if (c.accessor) chips.push(chip('accessor', 'bg-gray-100 text-gray-500'));
+            if (c.mutator) chips.push(chip('mutator', 'bg-gray-100 text-gray-500'));
 
-            const types = fieldTexts(nodeEl, 'attribute-type');
-            const names = fieldTexts(nodeEl, 'attribute-name');
-            const keys = fieldTexts(nodeEl, 'attribute-keys');
-            const comments = fieldTexts(nodeEl, 'attribute-comment');
-            const columns = names.map((name, i) => ({ name: name, type: types[i], notes: [keys[i], comments[i]].filter(Boolean).join(', ') }));
+            const extras = [];
+            if (c.cast) extras.push('cast: ' + (c.cast.includes('\\') ? c.cast.split('\\').pop() : c.cast));
+            if (c.default !== undefined) extras.push('default: ' + c.default);
 
-            const relations = parsed.edges
-                .filter(e => e.from === table || e.to === table)
-                .map(e => {
-                    const label = (e.line.match(/: "(.*)"$/) || [])[1] || '';
-                    const other = e.from === table ? e.to : e.from;
-                    return { other: other, label: label };
-                });
-
-            modalTitle.textContent = table;
-            modalBody.innerHTML = `
-                <dl class="grid grid-cols-[auto,1fr] gap-x-3 gap-y-1 text-xs">
-                    <dt class="font-medium text-gray-500">Model</dt>
-                    <dd class="text-gray-800">${modelClass ? escapeHtml(modelClass) : '—'}</dd>
-                    <dt class="font-medium text-gray-500">Columns</dt>
-                    <dd class="text-gray-800">${columns.length}</dd>
-                    <dt class="font-medium text-gray-500">Pivot table</dt>
-                    <dd class="text-gray-800">${pivots.has(table) ? 'Yes' : 'No'}</dd>
-                </dl>
-                <ul class="mt-3 max-h-48 divide-y divide-gray-100 overflow-y-auto text-xs">
-                    ${columns.map(c => `
-                        <li class="flex items-baseline justify-between gap-3 py-1">
-                            <span class="text-gray-800">${escapeHtml(c.name)} <span class="text-gray-400">${escapeHtml(c.type)}</span></span>
-                            <span class="shrink-0 text-right text-gray-500">${escapeHtml(c.notes)}</span>
-                        </li>
-                    `).join('')}
-                </ul>
-                ${relations.length ? `
-                    <h3 class="mt-3 text-xs font-medium text-gray-500">Relations</h3>
-                    <ul class="mt-1 max-h-32 divide-y divide-gray-100 overflow-y-auto text-xs">
-                        ${relations.map(r => `
-                            <li class="py-1 text-gray-700">
-                                <span class="font-medium">${escapeHtml(r.other)}</span> — ${escapeHtml(r.label)}
-                            </li>
-                        `).join('')}
-                    </ul>
-                ` : ''}
-            `;
-            modal.classList.remove('hidden');
-            modal.classList.add('flex');
+            return `
+                <li class="py-1.5">
+                    <div class="flex items-baseline gap-2">
+                        <span class="min-w-0 truncate font-mono text-gray-800">${escapeHtml(c.name)}</span>
+                        <span class="ml-auto shrink-0 text-gray-400">${escapeHtml(c.type)}</span>
+                    </div>
+                    ${chips.length || extras.length ? `
+                        <div class="mt-0.5 flex flex-wrap items-center gap-1">
+                            ${chips.join('')}
+                            ${extras.map(e => `<span class="text-[10px] text-gray-500">${escapeHtml(e)}</span>`).join('')}
+                        </div>
+                    ` : ''}
+                </li>`;
         }
 
-        function closeTableModal() {
-            modal.classList.add('hidden');
-            modal.classList.remove('flex');
+        function relationRow(r, other) {
+            const badge = TYPE_BADGES[r.type] || [r.type, 'bg-gray-100 text-gray-600'];
+            const cardinality = r.type === 'morph' ? 'morph(' + r.morphName + ')' : (r.oneToOne ? '1:1' : '1:N');
+
+            const meta = [];
+            if (r.columns && r.columns.length) meta.push('via ' + r.columns.join(', '));
+            if (r.declaredAs) meta.push(r.declaredAs);
+            if (r.onDelete) meta.push('on delete ' + r.onDelete);
+
+            return `
+                <li class="flex flex-wrap items-center gap-1.5 py-1.5">
+                    <button data-table="${escapeHtml(other)}"
+                        class="cursor-pointer font-medium text-gray-800 underline decoration-gray-300 underline-offset-2 hover:decoration-gray-500">${escapeHtml(other)}</button>
+                    ${chip(badge[0], badge[1])}
+                    <span class="text-[10px] text-gray-500">${escapeHtml(cardinality)}</span>
+                    ${meta.length ? `<span class="text-[10px] text-gray-400">${escapeHtml(meta.join(' · '))}</span>` : ''}
+                    ${r.unindexed ? chip('no index', 'bg-amber-100 text-amber-700') : ''}
+                </li>`;
+        }
+
+        function relationSection(title, rows) {
+            if (!rows.length) return '';
+            return `
+                <h3 class="mt-4 text-xs font-medium text-gray-500">${title}</h3>
+                <ul class="mt-1 divide-y divide-gray-100 text-xs">${rows.join('')}</ul>`;
+        }
+
+        function openSidebar(table) {
+            const details = graph.details[table];
+            if (!details) return;
+            selectedTable = table;
+
+            sidebarTitle.textContent = table;
+
+            const badges = [];
+            if (details.pivot) badges.push(chip('pivot', 'bg-amber-100 text-amber-700'));
+            (details.morphs || []).forEach(function(m) {
+                const unindexed = (details.unindexedMorphs || []).includes(m);
+                badges.push(chip('morph: ' + m + (unindexed ? ' · no index' : ''),
+                    unindexed ? 'bg-red-100 text-red-700' : 'bg-purple-100 text-purple-700'));
+            });
+            if (graph.models[table]) badges.push(chip(graph.models[table], 'bg-gray-100 text-gray-600'));
+            sidebarBadges.innerHTML = badges.join('');
+
+            const belongsTo = graph.relations.filter(r => r.to === table);
+            const referencedBy = graph.relations.filter(r => r.from === table);
+            const modelClass = graph.modelClasses[table];
+
+            sidebarBody.innerHTML = `
+                <dl class="grid grid-cols-[auto,1fr] gap-x-3 gap-y-1 text-xs">
+                    <dt class="font-medium text-gray-500">Model</dt>
+                    <dd class="break-all text-gray-800">${modelClass ? escapeHtml(modelClass) : '—'}</dd>
+                    <dt class="font-medium text-gray-500">Columns</dt>
+                    <dd class="text-gray-800">${details.columns.length}</dd>
+                    <dt class="font-medium text-gray-500">Relations</dt>
+                    <dd class="text-gray-800">${belongsTo.length + referencedBy.length}</dd>
+                </dl>
+                <h3 class="mt-4 text-xs font-medium text-gray-500">Columns</h3>
+                <ul class="mt-1 divide-y divide-gray-100 text-xs">
+                    ${details.columns.map(columnRow).join('')}
+                </ul>
+                ${relationSection('Belongs to', belongsTo.map(r => relationRow(r, r.from)))}
+                ${relationSection('Referenced by', referencedBy.map(r => relationRow(r, r.to)))}
+            `;
+            sidebar.classList.remove('hidden');
+            applySelection();
+        }
+
+        function closeSidebar() {
+            sidebar.classList.add('hidden');
+            selectedTable = null;
+            applySelection();
         }
 
         wrapper.addEventListener('click', function(e) {
@@ -418,15 +486,17 @@
             if (!nodeEl) return;
             const match = nodeEl.id.match(/-entity-(.+)-\d+$/);
             if (!match) return;
-            openTableModal(match[1], nodeEl);
+            openSidebar(match[1]);
         });
 
-        document.getElementById('table-modal-close').addEventListener('click', closeTableModal);
-        modal.addEventListener('click', function(e) {
-            if (e.target === modal) closeTableModal();
+        sidebarBody.addEventListener('click', function(e) {
+            const target = e.target.closest('[data-table]');
+            if (target) openSidebar(target.dataset.table);
         });
+
+        document.getElementById('sidebar-close').addEventListener('click', closeSidebar);
         window.addEventListener('keydown', function(e) {
-            if (e.key === 'Escape') closeTableModal();
+            if (e.key === 'Escape') closeSidebar();
         });
     </script>
 
@@ -434,6 +504,7 @@
         #diagram-wrapper svg { display: block; max-width: none !important; }
         #diagram-wrapper svg g.node { cursor: pointer; }
         #diagram-wrapper svg .erd-hl { background-color: rgba(245, 158, 11, 0.35); border-radius: 3px; }
+        #diagram-wrapper svg g.node.erd-selected { filter: drop-shadow(0 0 3px rgb(245 158 11)); }
     </style>
 </body>
 </html>

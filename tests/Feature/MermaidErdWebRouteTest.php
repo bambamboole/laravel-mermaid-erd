@@ -135,11 +135,12 @@ it('honors a configured dagre layout default', function (): void {
     $this->get('/mermaid-erd')->assertViewHas('defaultLayout', 'dagre');
 });
 
-it('contains the table detail modal and model classes in the graph payload', function (): void {
+it('contains the table detail sidebar and model classes in the graph payload', function (): void {
     $response = $this->get('/mermaid-erd');
 
     $response->assertOk();
-    $response->assertSee('id="table-modal"', false);
-    $response->assertSee('openTableModal', false);
+    $response->assertSee('id="table-sidebar"', false);
+    $response->assertSee('id="sidebar-body"', false);
+    $response->assertSee('openSidebar', false);
     $response->assertSee('"modelClasses":', false);
 });
