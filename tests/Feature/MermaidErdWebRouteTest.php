@@ -122,6 +122,25 @@ it('contains the layout engine switch and elk loader', function (): void {
     $response->assertSee('@mermaid-js/layout-elk', false);
 });
 
+it('pins the mermaid cdn versions', function (): void {
+    $response = $this->get('/mermaid-erd');
+
+    $response->assertOk();
+    $response->assertSee('mermaid@11', false);
+    $response->assertSee('@mermaid-js/layout-elk@0', false);
+});
+
+it('contains focus mode, schema health panel, and legend', function (): void {
+    $response = $this->get('/mermaid-erd');
+
+    $response->assertOk();
+    $response->assertSee('id="erd-focus"', false);
+    $response->assertSee('applyFocus', false);
+    $response->assertSee('id="health-btn"', false);
+    $response->assertSee('openHealthPanel', false);
+    $response->assertSee('id="erd-legend"', false);
+});
+
 it('defaults the layout engine to elk', function (): void {
     $response = $this->get('/mermaid-erd');
 

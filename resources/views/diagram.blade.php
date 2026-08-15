@@ -14,6 +14,8 @@
             <input id="erd-search" type="search" placeholder="Filter tables &amp; columns&hellip;" autocomplete="off"
                 class="w-full max-w-72 rounded-md border border-gray-200 bg-white px-3 py-1.5 text-xs text-gray-700 outline-none transition focus:border-gray-400" />
             <span id="erd-count" class="shrink-0 text-xs text-gray-500"></span>
+            <button id="erd-focus" title="Clear focus"
+                class="hidden shrink-0 rounded-full bg-amber-100 px-2.5 py-1 text-xs text-amber-800 transition hover:bg-amber-200 cursor-pointer"></button>
         </div>
         <div class="flex shrink-0 items-center gap-2">
             <select id="erd-layout" title="Layout engine"
@@ -21,6 +23,15 @@
                 <option value="elk">Layout: ELK</option>
                 <option value="dagre">Layout: Dagre</option>
             </select>
+            <button id="health-btn" title="Schema health"
+                class="flex items-center gap-1.5 rounded-md border border-gray-200 bg-white px-3 py-1.5 text-xs text-gray-600 transition hover:border-gray-300 hover:bg-gray-50 cursor-pointer">
+                Health
+                <span id="health-count" class="hidden rounded-full bg-amber-100 px-1.5 text-[10px] font-medium text-amber-800"></span>
+            </button>
+            <button id="legend-btn" title="Legend"
+                class="rounded-md border border-gray-200 bg-white px-3 py-1.5 text-xs text-gray-600 transition hover:border-gray-300 hover:bg-gray-50 cursor-pointer">
+                ?
+            </button>
             <div class="mx-1 h-5 w-px bg-gray-200"></div>
             <button id="zoom-out-btn" title="Zoom out"
                 class="rounded-md border border-gray-200 bg-white px-3 py-1.5 text-xs text-gray-600 transition hover:border-gray-300 hover:bg-gray-50 cursor-pointer">
@@ -58,13 +69,47 @@
                 <h2 id="sidebar-title" class="truncate text-sm font-semibold text-gray-800"></h2>
                 <div id="sidebar-badges" class="mt-1 flex flex-wrap gap-1"></div>
             </div>
-            <button id="sidebar-close" title="Close (Esc)"
-                class="shrink-0 rounded-md px-2 py-1 text-gray-400 transition hover:bg-gray-100 hover:text-gray-600 cursor-pointer">
-                &times;
-            </button>
+            <div class="flex shrink-0 items-center gap-1">
+                <button id="sidebar-focus" title="Focus on this table and its neighbors"
+                    class="rounded-md border border-gray-200 bg-white px-2 py-1 text-xs text-gray-600 transition hover:border-gray-300 hover:bg-gray-50 cursor-pointer">
+                    Focus
+                </button>
+                <button id="sidebar-close" title="Close (Esc)"
+                    class="rounded-md px-2 py-1 text-gray-400 transition hover:bg-gray-100 hover:text-gray-600 cursor-pointer">
+                    &times;
+                </button>
+            </div>
         </div>
         <div id="sidebar-body" class="px-4 py-3"></div>
     </aside>
+
+    <div id="erd-legend"
+        class="fixed bottom-4 left-4 z-10 hidden w-80 rounded-lg border border-gray-200 bg-white p-4 text-xs shadow-lg">
+        <h3 class="mb-2 font-semibold text-gray-800">Legend</h3>
+        <h4 class="mt-2 font-medium text-gray-500">Column markers</h4>
+        <div class="mt-1 flex flex-wrap items-center gap-x-3 gap-y-1 text-gray-600">
+            <span><span class="rounded bg-indigo-100 px-1.5 py-0.5 text-[10px] font-medium text-indigo-700">PK</span> primary key</span>
+            <span><span class="rounded bg-blue-100 px-1.5 py-0.5 text-[10px] font-medium text-blue-700">FK</span> foreign key</span>
+            <span><span class="rounded bg-teal-100 px-1.5 py-0.5 text-[10px] font-medium text-teal-700">UK</span> unique</span>
+        </div>
+        <h4 class="mt-3 font-medium text-gray-500">Relation types</h4>
+        <div class="mt-1 flex flex-wrap items-center gap-x-3 gap-y-1 text-gray-600">
+            <span><span class="rounded bg-blue-100 px-1.5 py-0.5 text-[10px] font-medium text-blue-700">FK</span> database constraint</span>
+            <span><span class="rounded bg-emerald-100 px-1.5 py-0.5 text-[10px] font-medium text-emerald-700">Eloquent</span> declared on a model</span>
+            <span><span class="rounded bg-gray-100 px-1.5 py-0.5 text-[10px] font-medium text-gray-600">Guessed</span> by column convention</span>
+            <span><span class="rounded bg-purple-100 px-1.5 py-0.5 text-[10px] font-medium text-purple-700">Morph</span> polymorphic</span>
+        </div>
+        <h4 class="mt-3 font-medium text-gray-500">Cardinality</h4>
+        <dl class="mt-1 grid grid-cols-[auto,1fr] gap-x-3 gap-y-0.5 text-gray-600">
+            <dt class="font-mono">||--o{</dt><dd>one to many</dd>
+            <dt class="font-mono">|o--o{</dt><dd>optional parent, many children</dd>
+            <dt class="font-mono">||--||</dt><dd>one to one</dd>
+        </dl>
+        <p class="mt-3 text-gray-600">
+            <span class="rounded bg-amber-100 px-1.5 py-0.5 text-[10px] font-medium text-amber-700">no index</span>
+            referencing columns lack a supporting index
+        </p>
+    </div>
 
     <script>
         const mermaidSource = {!! $diagram !!};
@@ -72,8 +117,8 @@
         const baseMermaidConfig = {!! $mermaidConfig !!};
     </script>
     <script type="module">
-        import mermaid from 'https://cdn.jsdelivr.net/npm/mermaid/dist/mermaid.esm.min.mjs';
-        import elkLayouts from 'https://cdn.jsdelivr.net/npm/@mermaid-js/layout-elk/dist/mermaid-layout-elk.esm.min.mjs';
+        import mermaid from 'https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.esm.min.mjs';
+        import elkLayouts from 'https://cdn.jsdelivr.net/npm/@mermaid-js/layout-elk@0/dist/mermaid-layout-elk.esm.min.mjs';
 
         mermaid.registerLayoutLoaders(elkLayouts);
 
@@ -225,18 +270,7 @@
         const totalTables = Object.keys(graph.tables).length;
         const pivots = new Set(graph.pivots);
 
-        function computeVisible(query) {
-            const q = query.trim().toLowerCase();
-            if (!q) return null;
-
-            const matched = new Set();
-            for (const [table, columns] of Object.entries(graph.tables)) {
-                const model = (graph.models[table] || '').toLowerCase();
-                if (table.toLowerCase().includes(q) || model.includes(q) || columns.some(c => c.toLowerCase().includes(q))) {
-                    matched.add(table);
-                }
-            }
-
+        function expandNeighbors(matched) {
             const visible = new Set(matched);
             for (const [from, to] of graph.edges) {
                 if (matched.has(from)) visible.add(to);
@@ -251,6 +285,21 @@
             }
 
             return visible;
+        }
+
+        function computeVisible(query) {
+            const q = query.trim().toLowerCase();
+            if (!q) return null;
+
+            const matched = new Set();
+            for (const [table, columns] of Object.entries(graph.tables)) {
+                const model = (graph.models[table] || '').toLowerCase();
+                if (table.toLowerCase().includes(q) || model.includes(q) || columns.some(c => c.toLowerCase().includes(q))) {
+                    matched.add(table);
+                }
+            }
+
+            return expandNeighbors(matched);
         }
 
         function buildFilteredSource(visible) {
@@ -299,6 +348,7 @@
 
         const searchInput = document.getElementById('erd-search');
         const countLabel = document.getElementById('erd-count');
+        const focusChip = document.getElementById('erd-focus');
 
         function applyFilter(query) {
             const visible = computeVisible(query);
@@ -308,7 +358,7 @@
             history.replaceState(null, '', url);
 
             if (visible === null) {
-                countLabel.textContent = totalTables + ' tables';
+                countLabel.textContent = totalTables + ' tables · ' + graph.relations.length + ' relations';
                 currentSource = mermaidSource;
                 renderDiagram();
                 return;
@@ -327,10 +377,45 @@
             renderDiagram();
         }
 
+        // --- Focus mode ----------------------------------------------------------
+        // Focus narrows the diagram to one table plus its direct neighbors.
+        // Search and focus are mutually exclusive: starting one clears the other.
+
+        let focusTable = null;
+
+        function applyFocus(table) {
+            focusTable = table;
+            searchInput.value = '';
+
+            const url = new URL(location);
+            url.searchParams.delete('q');
+            history.replaceState(null, '', url);
+
+            const visible = expandNeighbors(new Set([table]));
+            focusChip.textContent = 'Focused: ' + table + ' ✕';
+            focusChip.classList.remove('hidden');
+            countLabel.textContent = visible.size + ' / ' + totalTables + ' tables';
+            currentSource = buildFilteredSource(visible);
+            renderDiagram();
+        }
+
+        function clearFocus() {
+            if (focusTable === null) return;
+            focusTable = null;
+            focusChip.classList.add('hidden');
+            applyFilter(searchInput.value);
+        }
+
+        focusChip.addEventListener('click', clearFocus);
+
         let debounceTimer;
         searchInput.addEventListener('input', function() {
             clearTimeout(debounceTimer);
-            debounceTimer = setTimeout(() => applyFilter(searchInput.value), 150);
+            debounceTimer = setTimeout(function() {
+                focusTable = null;
+                focusChip.classList.add('hidden');
+                applyFilter(searchInput.value);
+            }, 150);
         });
 
         searchInput.value = new URL(location).searchParams.get('q') || '';
@@ -364,6 +449,8 @@
             guessed: ['Guessed', 'bg-gray-100 text-gray-600'],
             morph: ['Morph', 'bg-purple-100 text-purple-700'],
         };
+
+        const TABLE_LINK = 'cursor-pointer font-medium text-gray-800 underline decoration-gray-300 underline-offset-2 hover:decoration-gray-500';
 
         function applySelection() {
             const svg = wrapper.querySelector('svg');
@@ -417,8 +504,7 @@
 
             return `
                 <li class="flex flex-wrap items-center gap-1.5 py-1.5">
-                    <button data-table="${escapeHtml(other)}"
-                        class="cursor-pointer font-medium text-gray-800 underline decoration-gray-300 underline-offset-2 hover:decoration-gray-500">${escapeHtml(other)}</button>
+                    <button data-table="${escapeHtml(other)}" class="${TABLE_LINK}">${escapeHtml(other)}</button>
                     ${chip(badge[0], badge[1])}
                     <span class="text-[10px] text-gray-500">${escapeHtml(cardinality)}</span>
                     ${meta.length ? `<span class="text-[10px] text-gray-400">${escapeHtml(meta.join(' · '))}</span>` : ''}
@@ -495,8 +581,71 @@
         });
 
         document.getElementById('sidebar-close').addEventListener('click', closeSidebar);
+        document.getElementById('sidebar-focus').addEventListener('click', function() {
+            if (selectedTable) applyFocus(selectedTable);
+        });
+
+        // --- Schema health ---------------------------------------------------------
+
+        const healthIssues = {
+            unindexed: graph.relations.filter(r => r.unindexed),
+            unmappedMorphs: graph.unmappedMorphs,
+        };
+        const healthCount = document.getElementById('health-count');
+        const totalIssues = healthIssues.unindexed.length + healthIssues.unmappedMorphs.length;
+        if (totalIssues > 0) {
+            healthCount.textContent = totalIssues;
+            healthCount.classList.remove('hidden');
+        }
+
+        function openHealthPanel() {
+            selectedTable = null;
+            applySelection();
+
+            sidebarTitle.textContent = 'Schema health';
+            sidebarBadges.innerHTML = '';
+
+            const unindexedRows = healthIssues.unindexed.map(function(r) {
+                const via = (r.columns && r.columns.length) ? r.columns.join(', ') : (r.morphName ? r.morphName + '_id' : '');
+                return `
+                    <li class="flex flex-wrap items-center gap-1.5 py-1.5">
+                        <button data-table="${escapeHtml(r.to)}" class="${TABLE_LINK}">${escapeHtml(r.to)}</button>
+                        <span class="text-[10px] text-gray-400">${escapeHtml(via)} →</span>
+                        <button data-table="${escapeHtml(r.from)}" class="${TABLE_LINK}">${escapeHtml(r.from)}</button>
+                    </li>`;
+            });
+
+            sidebarBody.innerHTML = `
+                ${unindexedRows.length ? `
+                    <h3 class="text-xs font-medium text-gray-500">Relations without a supporting index</h3>
+                    <ul class="mt-1 divide-y divide-gray-100 text-xs">${unindexedRows.join('')}</ul>
+                ` : ''}
+                ${healthIssues.unmappedMorphs.length ? `
+                    <h3 class="mt-4 text-xs font-medium text-gray-500">Unmapped polymorphic relations</h3>
+                    <p class="mt-1 text-[10px] text-gray-400">Add them to the 'mermaid-erd.polymorphic_relationships' config.</p>
+                    <ul class="mt-1 divide-y divide-gray-100 text-xs">
+                        ${healthIssues.unmappedMorphs.map(m => `<li class="py-1.5 font-mono text-gray-700">${escapeHtml(m)}</li>`).join('')}
+                    </ul>
+                ` : ''}
+                ${totalIssues === 0 ? '<p class="text-xs text-gray-500">No issues found.</p>' : ''}
+            `;
+            sidebar.classList.remove('hidden');
+        }
+
+        document.getElementById('health-btn').addEventListener('click', openHealthPanel);
+
+        // --- Legend ------------------------------------------------------------------
+
+        const legend = document.getElementById('erd-legend');
+        document.getElementById('legend-btn').addEventListener('click', function() {
+            legend.classList.toggle('hidden');
+        });
+
         window.addEventListener('keydown', function(e) {
-            if (e.key === 'Escape') closeSidebar();
+            if (e.key === 'Escape') {
+                closeSidebar();
+                legend.classList.add('hidden');
+            }
         });
     </script>
 
