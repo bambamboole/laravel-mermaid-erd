@@ -47,6 +47,9 @@ it('contains the filter search box and graph payload', function (): void {
     $response->assertSee('id="erd-search"', false);
     $response->assertSee('const graph =', false);
     $response->assertSee('"edges":', false);
+    $response->assertSee('"details":', false);
+    $response->assertSee('"relations":', false);
+    $response->assertSee('"unmappedMorphs":', false);
 });
 
 it('contains diagram with table names', function (): void {
