@@ -18,8 +18,8 @@
         <div class="flex shrink-0 items-center gap-2">
             <select id="erd-layout" title="Layout engine"
                 class="rounded-md border border-gray-200 bg-white px-2 py-1.5 text-xs text-gray-600 outline-none transition hover:border-gray-300 cursor-pointer">
-                <option value="dagre">Layout: Dagre</option>
                 <option value="elk">Layout: ELK</option>
+                <option value="dagre">Layout: Dagre</option>
             </select>
             <div class="mx-1 h-5 w-px bg-gray-200"></div>
             <button id="zoom-out-btn" title="Zoom out"
@@ -75,7 +75,9 @@
 
         mermaid.registerLayoutLoaders(elkLayouts);
 
-        let currentLayout = new URL(location).searchParams.get('layout') === 'elk' ? 'elk' : 'dagre';
+        const defaultLayout = @js($defaultLayout);
+        const layoutParam = new URL(location).searchParams.get('layout');
+        let currentLayout = (layoutParam === 'elk' || layoutParam === 'dagre') ? layoutParam : defaultLayout;
         mermaid.initialize(Object.assign({}, baseMermaidConfig, { startOnLoad: false, layout: currentLayout }));
 
         let scale = 1;

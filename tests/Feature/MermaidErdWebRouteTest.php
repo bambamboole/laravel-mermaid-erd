@@ -122,6 +122,19 @@ it('contains the layout engine switch and elk loader', function (): void {
     $response->assertSee('@mermaid-js/layout-elk', false);
 });
 
+it('defaults the layout engine to elk', function (): void {
+    $response = $this->get('/mermaid-erd');
+
+    $response->assertOk();
+    $response->assertViewHas('defaultLayout', 'elk');
+});
+
+it('honors a configured dagre layout default', function (): void {
+    config()->set('mermaid-erd.web.layout', 'dagre');
+
+    $this->get('/mermaid-erd')->assertViewHas('defaultLayout', 'dagre');
+});
+
 it('contains the table detail modal and model classes in the graph payload', function (): void {
     $response = $this->get('/mermaid-erd');
 

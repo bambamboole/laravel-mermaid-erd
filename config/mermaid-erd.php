@@ -39,6 +39,10 @@ return [
         'route' => '/mermaid-erd',
         'middleware' => ['web'],
 
+        // Default diagram layout engine: 'elk' or 'dagre'. A ?layout= URL
+        // parameter overrides this per request.
+        'layout' => 'elk',
+
         'cache' => [
             'enabled' => false,
             'ttl' => 3600,
