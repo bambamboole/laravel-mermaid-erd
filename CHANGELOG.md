@@ -2,6 +2,44 @@
 
 All notable changes to `laravel-mermaid-erd` will be documented in this file.
 
+## [0.6.0](https://github.com/bambamboole/laravel-mermaid-erd/compare/0.5.0...0.6.0) (2026-08-17)
+
+
+### ⚠ BREAKING CHANGES
+
+* requires PHP 8.4+ and Laravel 13. Support for PHP 8.3 and Laravel 12 is dropped.
+
+### Features
+
+* add ELK layout switch, search highlighting, and table detail modal to ERD viewer ([de09cc9](https://github.com/bambamboole/laravel-mermaid-erd/commit/de09cc9310d41ae8e28c8639e7a8ec6dd2d6a98f))
+* add focus mode, schema health panel, legend, and pinned CDN versions ([8eb5fc1](https://github.com/bambamboole/laravel-mermaid-erd/commit/8eb5fc130394629e2766476e28bdaebf0416b9f2))
+* annotate relations whose columns lack a supporting index ([1f73717](https://github.com/bambamboole/laravel-mermaid-erd/commit/1f73717f9fbfa283cf9ece30a0a988183c1a90f0))
+* annotate relations whose columns lack a supporting index ([83b5797](https://github.com/bambamboole/laravel-mermaid-erd/commit/83b5797cf6d6a7c3cef33b3ec0a8f47424f0acfd))
+* expose structured column and relation details in the graph payload ([a57db70](https://github.com/bambamboole/laravel-mermaid-erd/commit/a57db705fd4b685ad5a5cf26354ad0e2d8fa237b))
+* make elk the default layout engine, configurable via web.layout ([cf175a7](https://github.com/bambamboole/laravel-mermaid-erd/commit/cf175a79d8c48c445b5471c5e6f0d5669af345e4))
+* replace the table detail modal with an info sidebar ([0069838](https://github.com/bambamboole/laravel-mermaid-erd/commit/00698384c374afe0dbfe2e4dd8fe8886ac9bdbaa))
+* require PHP 8.4 and Laravel 13, adopting the extended-testbench scaffold ([db60a90](https://github.com/bambamboole/laravel-mermaid-erd/commit/db60a90064be616a2eb91ab79c255af8d0b7aa62))
+* show columns and relations in the ERD table detail modal ([b0de073](https://github.com/bambamboole/laravel-mermaid-erd/commit/b0de0733bddd0ec4f1a48d9b3601ba6027ff7a83))
+
+
+### Bug Fixes
+
+* detect pivot tables without a real foreign key constraint ([4286a7c](https://github.com/bambamboole/laravel-mermaid-erd/commit/4286a7ca295d2d9054c4f7222f4646e08406d933))
+
+
+### Refactoring
+
+* derive relation facts from Column objects and dedupe wiring ([d5199dd](https://github.com/bambamboole/laravel-mermaid-erd/commit/d5199ddc47cd5aba975685ddf19b8a8eb0db11e5))
+* introduce a mermaid document object model behind MermaidErdRenderer ([8daf143](https://github.com/bambamboole/laravel-mermaid-erd/commit/8daf14368cb7fa89e878e5fa576ea8eba13174be))
+* replace spatie/laravel-package-tools with a plain service provider ([582206c](https://github.com/bambamboole/laravel-mermaid-erd/commit/582206c90f51d4bf2f76fc1d347c99e374da0e4b))
+* strip over-engineering found by audit ([f7f5e3b](https://github.com/bambamboole/laravel-mermaid-erd/commit/f7f5e3b1e586669e908cb18a3fb652cc329c8e98))
+
+
+### Documentation
+
+* regenerate the README ERD from the current workbench schema ([e7472ad](https://github.com/bambamboole/laravel-mermaid-erd/commit/e7472ad2bbbd8e2c729e44d258175180b311671a))
+* trim the guidelines to project-specific rules ([5529336](https://github.com/bambamboole/laravel-mermaid-erd/commit/55293369fda6aaa3803516af1408ef2a6365466f))
+
 ## [0.5.0](https://github.com/bambamboole/laravel-mermaid-erd/compare/0.4.0...0.5.0) (2026-07-31)
 
 
