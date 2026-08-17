@@ -24,7 +24,7 @@ it('contains required html structure', function (): void {
 
     $response->assertOk();
     $response->assertSee('<!DOCTYPE html>', false);
-    $response->assertSee('mermaid.min.js', false);
+    $response->assertSee('mermaid.esm.min.mjs', false);
     $response->assertSee('id="diagram-wrapper"', false);
     $response->assertSee('tailwindcss', false);
 });
@@ -47,6 +47,9 @@ it('contains the filter search box and graph payload', function (): void {
     $response->assertSee('id="erd-search"', false);
     $response->assertSee('const graph =', false);
     $response->assertSee('"edges":', false);
+    $response->assertSee('"details":', false);
+    $response->assertSee('"relations":', false);
+    $response->assertSee('"unmappedMorphs":', false);
 });
 
 it('contains diagram with table names', function (): void {
@@ -108,4 +111,55 @@ it('contains copy and download buttons', function (): void {
     $response->assertOk();
     $response->assertSee('copyMermaid()', false);
     $response->assertSee('downloadSVG()', false);
+});
+
+it('contains the layout engine switch and elk loader', function (): void {
+    $response = $this->get('/mermaid-erd');
+
+    $response->assertOk();
+    $response->assertSee('id="erd-layout"', false);
+    $response->assertSee('registerLayoutLoaders', false);
+    $response->assertSee('@mermaid-js/layout-elk', false);
+});
+
+it('pins the mermaid cdn versions', function (): void {
+    $response = $this->get('/mermaid-erd');
+
+    $response->assertOk();
+    $response->assertSee('mermaid@11', false);
+    $response->assertSee('@mermaid-js/layout-elk@0', false);
+});
+
+it('contains focus mode, schema health panel, and legend', function (): void {
+    $response = $this->get('/mermaid-erd');
+
+    $response->assertOk();
+    $response->assertSee('id="erd-focus"', false);
+    $response->assertSee('applyFocus', false);
+    $response->assertSee('id="health-btn"', false);
+    $response->assertSee('openHealthPanel', false);
+    $response->assertSee('id="erd-legend"', false);
+});
+
+it('defaults the layout engine to elk', function (): void {
+    $response = $this->get('/mermaid-erd');
+
+    $response->assertOk();
+    $response->assertViewHas('defaultLayout', 'elk');
+});
+
+it('honors a configured dagre layout default', function (): void {
+    config()->set('mermaid-erd.web.layout', 'dagre');
+
+    $this->get('/mermaid-erd')->assertViewHas('defaultLayout', 'dagre');
+});
+
+it('contains the table detail sidebar and model classes in the graph payload', function (): void {
+    $response = $this->get('/mermaid-erd');
+
+    $response->assertOk();
+    $response->assertSee('id="table-sidebar"', false);
+    $response->assertSee('id="sidebar-body"', false);
+    $response->assertSee('openSidebar', false);
+    $response->assertSee('"modelClasses":', false);
 });

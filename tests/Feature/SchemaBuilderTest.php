@@ -43,6 +43,17 @@ it('marks pivot tables', function (): void {
         ->and($schema->table('posts')->pivot)->toBeFalse();
 });
 
+it('marks pivot tables detected by naming convention without a real foreign key', function (): void {
+    SchemaFacade::create('post_user', function (Blueprint $table): void {
+        $table->unsignedBigInteger('post_id');
+        $table->unsignedBigInteger('user_id');
+    });
+
+    expect(buildSchema()->table('post_user')->pivot)->toBeTrue();
+
+    SchemaFacade::drop('post_user');
+});
+
 it('detects morph pairs and flags their columns', function (): void {
     $reviews = buildSchema()->table('reviews');
 

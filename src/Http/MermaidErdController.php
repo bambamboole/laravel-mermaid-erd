@@ -43,6 +43,7 @@ class MermaidErdController
             'diagram' => json_encode($data['diagram'], $jsonFlags),
             'graph' => json_encode($data['graph'], $jsonFlags),
             'mermaidConfig' => json_encode(config('mermaid-erd.web.mermaid', []), $jsonFlags),
+            'defaultLayout' => config('mermaid-erd.web.layout') === 'dagre' ? 'dagre' : 'elk',
         ]);
     }
 }

@@ -4,6 +4,11 @@ declare(strict_types=1);
 
 namespace Bambamboole\LaravelMermaidErd;
 
+use Bambamboole\LaravelMermaidErd\Mermaid\Cardinality;
+use Bambamboole\LaravelMermaidErd\Mermaid\ErdAttribute;
+use Bambamboole\LaravelMermaidErd\Mermaid\ErdDocument;
+use Bambamboole\LaravelMermaidErd\Mermaid\ErdEntity;
+use Bambamboole\LaravelMermaidErd\Mermaid\ErdRelation;
 use Bambamboole\LaravelMermaidErd\Schema\Column;
 use Bambamboole\LaravelMermaidErd\Schema\Relation;
 use Bambamboole\LaravelMermaidErd\Schema\RelationType;
@@ -14,64 +19,48 @@ class MermaidErdRenderer
 {
     public function render(Schema $schema): string
     {
+        return $this->toDocument($schema)->render();
+    }
+
+    private function toDocument(Schema $schema): ErdDocument
+    {
         $tableCount = count($schema->tables);
         $totalColumns = array_sum(array_map(fn (Table $table): int => count($table->columns), $schema->tables));
 
-        $diagram = "---\ntitle: {$tableCount} tables · {$totalColumns} columns\n---\nerDiagram\n";
-
-        foreach ($schema->tables as $table) {
-            $diagram .= $this->renderTable($table);
-        }
-
-        foreach ($schema->relations as $relation) {
-            $diagram .= $this->renderRelation($relation, $schema);
-        }
-
-        $unmapped = $schema->unmappedMorphs();
-        if ($unmapped !== []) {
-            $diagram .= "%% Unmapped polymorphic relations (add to config 'mermaid-erd.polymorphic_relationships'):\n";
-            foreach ($unmapped as $pair) {
-                [$tableName, $morphName] = explode('.', $pair, 2);
-                $noIndex = in_array($morphName, $schema->table($tableName)->unindexedMorphs ?? []) ? ', no index' : '';
-                $diagram .= "%%   {$pair} ({$morphName}_type + {$morphName}_id{$noIndex})\n";
-            }
-        }
-
-        return $diagram;
+        return new ErdDocument(
+            title: "{$tableCount} tables · {$totalColumns} columns",
+            entities: array_map($this->toEntity(...), array_values($schema->tables)),
+            relations: array_map(fn (Relation $relation): ErdRelation => $this->toRelation($relation, $schema), $schema->relations),
+            trailingComments: $this->unmappedMorphComments($schema),
+        );
     }
 
-    private function renderTable(Table $table): string
+    private function toEntity(Table $table): ErdEntity
     {
         $columnCount = count($table->columns);
-        $header = "{$table->name} ({$columnCount})";
+        $label = "{$table->name} ({$columnCount})";
         if ($table->model !== null) {
-            $header .= ' · '.class_basename($table->model);
-        }
-        $diagram = "    {$table->name}[\"{$header}\"] {\n";
-
-        foreach ($table->columns as $column) {
-            $diagram .= $this->renderColumn($column)."\n";
+            $label .= ' · '.class_basename($table->model);
         }
 
-        return $diagram."    }\n";
+        return new ErdEntity(
+            id: $table->name,
+            label: $label,
+            attributes: array_map($this->toAttribute(...), array_values($table->columns)),
+        );
     }
 
-    private function renderColumn(Column $column): string
+    private function toAttribute(Column $column): ErdAttribute
     {
-        $line = "        {$column->type} {$column->name}";
-
-        $constraints = [];
+        $keys = [];
         if ($column->primaryKey) {
-            $constraints[] = 'PK';
+            $keys[] = 'PK';
         }
         if ($column->foreignKey) {
-            $constraints[] = 'FK';
+            $keys[] = 'FK';
         }
         if ($column->unique && ! $column->primaryKey) {
-            $constraints[] = 'UK';
-        }
-        if ($constraints !== []) {
-            $line .= ' '.implode(', ', $constraints);
+            $keys[] = 'UK';
         }
 
         $comments = [];
@@ -97,27 +86,53 @@ class MermaidErdRenderer
         if ($column->default !== null) {
             $comments[] = "default: {$column->default}";
         }
-        if ($comments !== []) {
-            $line .= ' "'.implode(', ', $comments).'"';
-        }
 
-        return $line;
+        return new ErdAttribute(
+            name: $column->name,
+            type: $column->type,
+            keys: $keys,
+            comment: $comments === [] ? null : implode(', ', $comments),
+        );
     }
 
-    private function renderRelation(Relation $relation, Schema $schema): string
+    private function toRelation(Relation $relation, Schema $schema): ErdRelation
     {
-        $parentSide = $relation->nullable ? '|o' : '||';
+        $parent = $relation->nullable ? Cardinality::ZeroOrOne : Cardinality::ExactlyOne;
         $noIndex = $relation->indexed ? '' : ', no index';
 
         return match ($relation->type) {
-            RelationType::ForeignKey => $this->renderForeignKeyRelation($relation, $schema, $parentSide),
-            RelationType::Eloquent => $this->renderEloquentRelation($relation, $schema, $parentSide),
-            RelationType::Guessed => "    {$relation->from} {$parentSide}--o{ {$relation->to} : \"guessed has many via {$relation->columns[0]}{$noIndex}\"\n",
-            RelationType::Morph => "    {$relation->from} ||--o{ {$relation->to} : \"morphMany via {$relation->morphName}{$noIndex}\"\n",
+            RelationType::ForeignKey => new ErdRelation(
+                from: $relation->from,
+                to: $relation->to,
+                parent: $parent,
+                child: $relation->oneToOne ? Cardinality::ExactlyOne : Cardinality::ZeroOrMore,
+                label: $this->foreignKeyLabel($relation, $schema),
+            ),
+            RelationType::Eloquent => new ErdRelation(
+                from: $relation->from,
+                to: $relation->to,
+                parent: $parent,
+                child: $relation->oneToOne ? Cardinality::ExactlyOne : Cardinality::ZeroOrMore,
+                label: $this->eloquentLabel($relation, $schema),
+            ),
+            RelationType::Guessed => new ErdRelation(
+                from: $relation->from,
+                to: $relation->to,
+                parent: $parent,
+                child: Cardinality::ZeroOrMore,
+                label: "guessed has many via {$relation->columns[0]}{$noIndex}",
+            ),
+            RelationType::Morph => new ErdRelation(
+                from: $relation->from,
+                to: $relation->to,
+                parent: Cardinality::ExactlyOne,
+                child: Cardinality::ZeroOrMore,
+                label: "morphMany via {$relation->morphName}{$noIndex}",
+            ),
         };
     }
 
-    private function renderEloquentRelation(Relation $relation, Schema $schema, string $parentSide): string
+    private function eloquentLabel(Relation $relation, Schema $schema): string
     {
         $label = "{$relation->declaredAs} via {$relation->columns[0]}";
 
@@ -129,20 +144,11 @@ class MermaidErdRenderer
             $label .= ', no unique index';
         }
 
-        return sprintf(
-            "    %s %s--%s %s : \"%s\"\n",
-            $relation->from,
-            $parentSide,
-            $relation->oneToOne ? '||' : 'o{',
-            $relation->to,
-            $label,
-        );
+        return $label;
     }
 
-    private function renderForeignKeyRelation(Relation $relation, Schema $schema, string $parentSide): string
+    private function foreignKeyLabel(Relation $relation, Schema $schema): string
     {
-        $childSide = $relation->oneToOne ? '||' : 'o{';
-
         if ($relation->selfReferential()) {
             $label = 'self-ref';
         } else {
@@ -159,9 +165,29 @@ class MermaidErdRenderer
         }
 
         if ($schema->table($relation->to)?->pivot) {
-            $label = "pivot, {$label}";
+            return "pivot, {$label}";
         }
 
-        return "    {$relation->from} {$parentSide}--{$childSide} {$relation->to} : \"{$label}\"\n";
+        return $label;
+    }
+
+    /**
+     * @return string[]
+     */
+    private function unmappedMorphComments(Schema $schema): array
+    {
+        $unmapped = $schema->unmappedMorphs();
+        if ($unmapped === []) {
+            return [];
+        }
+
+        $comments = ["Unmapped polymorphic relations (add to config 'mermaid-erd.polymorphic_relationships'):"];
+        foreach ($unmapped as $pair) {
+            [$tableName, $morphName] = explode('.', $pair, 2);
+            $noIndex = in_array($morphName, $schema->table($tableName)->unindexedMorphs ?? []) ? ', no index' : '';
+            $comments[] = "  {$pair} ({$morphName}_type + {$morphName}_id{$noIndex})";
+        }
+
+        return $comments;
     }
 }
